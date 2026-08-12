@@ -104,3 +104,19 @@ export function restorationObjectives(state: { rescued: boolean; blueprint: bool
     { done: state.hallLevel >= 3, label: "Complete the Expedition Hall" },
   ];
 }
+
+export function relicChoices<T extends { name: string }>(relics: T[], owned: string[], seed: string) {
+  return seededShuffle(relics.filter(relic => !owned.includes(relic.name)), seed).slice(0, 2);
+}
+
+export function eligibleRewards<T extends { element?: string }>(cards: T[], selected: string[], seed: string) {
+  return seededShuffle(cards.filter(card => !card.element || selected.includes(card.element)), seed).slice(0, 3);
+}
+
+export function canAfford(balance: number, price: number) {
+  return balance >= price && price >= 0;
+}
+
+export function spend(balance: number, price: number) {
+  return canAfford(balance, price) ? balance - price : balance;
+}

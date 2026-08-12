@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cityRank, expeditionGrade, hashSeed, incomingAttack, parseCampaignSave, reactionResult, removeAt, repairCampaignSave, restorationObjectives, rewardBand, scaledEnemyHp, seededShuffle } from "../app/game-logic.ts";
+import { canAfford, cityRank, eligibleRewards, expeditionGrade, hashSeed, incomingAttack, parseCampaignSave, reactionResult, relicChoices, removeAt, repairCampaignSave, restorationObjectives, rewardBand, scaledEnemyHp, seededShuffle, spend } from "../app/game-logic.ts";
 
 test("seeded shuffles are reproducible and seed-sensitive",()=>{
   const cards=["a","b","c","d","e","f"];
@@ -74,4 +74,21 @@ test("restoration checklist tracks rescues and tier-three buildings",()=>{
   assert.equal(early.filter(item=>item.done).length,0);
   const complete=restorationObjectives({rescued:true,blueprint:true,wandererRescued:true,forgeLevel:3,sanctumLevel:3,hallLevel:3});
   assert.equal(complete.filter(item=>item.done).length,6);
+});
+
+test("reward eligibility respects the two selected elements",()=>{
+  const cards=[{name:"Flame",element:"fire"},{name:"Tide",element:"water"},{name:"Spark",element:"lightning"},{name:"Steel"}];
+  const choices=eligibleRewards(cards,["fire","water"],"RUN-1");
+  assert.equal(choices.length,3);assert.ok(choices.every(card=>!card.element||["fire","water"].includes(card.element)));
+});
+
+test("relic choices exclude relics already held",()=>{
+  const relics=[{name:"Bell"},{name:"Lens"},{name:"Glass"}];
+  const choices=relicChoices(relics,["Bell"],"RUN-1");
+  assert.equal(choices.length,2);assert.ok(choices.every(relic=>relic.name!=="Bell"));
+});
+
+test("town and merchant purchases cannot create negative balances",()=>{
+  assert.equal(canAfford(25,25),true);assert.equal(canAfford(24,25),false);
+  assert.equal(spend(25,25),0);assert.equal(spend(24,25),24);assert.equal(spend(10,-1),10);
 });
