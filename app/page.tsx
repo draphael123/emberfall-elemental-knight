@@ -54,6 +54,16 @@ const ENEMY_INTENTS = [
   { name: "Horned Rush", damage: 13, detail: "Attacks for 13" },
 ];
 
+const FOES = [
+  { name: "Ash Hound", art: "ash-hound" }, { name: "Cinder Cultist", art: "cinder-cultist" },
+  { name: "Gate Reaver", art: "gate-reaver" }, { name: "Drowned Penitent", art: "drowned-penitent" },
+  { name: "Storm Imp", art: "storm-imp" }, { name: "Ironbound Brute", art: "ironbound-brute" },
+];
+const BOSSES = [
+  { name: "Furnace Bishop", art: "furnace-bishop" }, { name: "Tempest Wyvern", art: "tempest-wyvern" },
+  { name: "Abyssal Tidemother", art: "abyssal-tidemother" }, { name: "Ashen Colossus", art: "ashen-colossus" },
+];
+
 const emptyMarks = (): MarkState => ({ fire: 0, water: 0, lightning: 0 });
 const shuffle = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
 
@@ -75,6 +85,11 @@ export default function Home() {
   const [log, setLog] = useState("The gate groans. The Legion Warden advances.");
   const [rescued, setRescued] = useState(false);
   const [blueprint, setBlueprint] = useState(false);
+  const [townPos, setTownPos] = useState({ x: 48, y: 58 });
+  const [townMessage, setTownMessage] = useState("Click anywhere in the courtyard to walk.");
+  const [showRoster, setShowRoster] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [impact, setImpact] = useState("");
 
   const deck = useMemo(
     () => [...BASE_CARDS, ...ELEMENT_CARDS[selected[0]], ...ELEMENT_CARDS[selected[1]]],
@@ -158,6 +173,8 @@ export default function Home() {
     }
 
     if (dealt) {
+      setImpact(card.element ?? "steel");
+      window.setTimeout(() => setImpact(""), 360);
       const absorbed = Math.min(enemyArmor, dealt);
       const hpDamage = dealt - absorbed;
       const nextHp = enemyHp - hpDamage;
@@ -213,15 +230,17 @@ export default function Home() {
       <main className="town-screen">
         <header className="topbar">
           <div className="brand"><span className="crest">EK</span><div><b>EMBERFALL</b><small>An Elemental Knight Chronicle</small></div></div>
-          <div className="resources"><span>Blueprints <b>{blueprint ? 1 : 0}</b></span><span>Survivors <b>{rescued ? 1 : 0}</b></span></div>
+          <div className="resources"><button onClick={()=>setShowRoster(true)}>Bestiary</button><button onClick={()=>setShowSettings(true)}>Settings</button><span>Blueprints <b>{blueprint ? 1 : 0}</b></span><span>Survivors <b>{rescued ? 1 : 0}</b></span></div>
         </header>
         <section className="town-intro">
           <p className="eyebrow">THE LAST QUIET GROUND</p>
           <h1>Reclaim what the demons left behind.</h1>
           <p>Raise a fortress from ash. Every rescued soul changes what the Knight can carry beyond the gate.</p>
         </section>
-        <section className="town-grid" aria-label="Overhead town building grid">
+        <section className="town-grid" aria-label="Walkable overhead town" onClick={(event)=>{const rect=event.currentTarget.getBoundingClientRect();setTownPos({x:((event.clientX-rect.left)/rect.width)*100,y:((event.clientY-rect.top)/rect.height)*100});setTownMessage("Boots ring across the wet stones.")}}>
           <div className="grid-lines" />
+          <div className="town-knight" style={{left:`${townPos.x}%`,top:`${townPos.y}%`}}><img src="/art/elemental-knight.webp" alt="Elemental Knight walking through town"/></div>
+          {rescued && <button className="town-npc" onClick={(event)=>{event.stopPropagation();setTownMessage("Mara: Bring me a blueprint and I will make it sing.")}}>Mara</button>}
           <button className="building forge"><span className="roof">⚒</span><b>Blacksmith</b><small>{rescued ? "Mara has returned" : "Ruined · survivor missing"}</small></button>
           <button className="building sanctum"><span className="roof">✦</span><b>Elemental Sanctum</b><small>Attunement available</small></button>
           <button className="building hall"><span className="roof">⌂</span><b>Expedition Hall</b><small>Gate route prepared</small></button>
@@ -233,8 +252,10 @@ export default function Home() {
           <h2>The Ashen March</h2>
           <p>Demons have nested inside the old western fortress. Break their warden and recover the first city plans.</p>
           <div className="route"><span className="node done">Town</span><i /><span className="node">Wilds</span><i /><span className="node boss">Fortress</span></div>
-          <button className="primary" onClick={() => setScreen("attune")}>Prepare expedition <span>→</span></button>
+          <div className="town-dialogue">{townMessage}</div><button className="primary" onClick={() => setScreen("attune")}>Prepare expedition <span>→</span></button>
         </aside>
+        {showRoster&&<div className="modal-backdrop" onClick={()=>setShowRoster(false)}><section className="codex-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowRoster(false)}>Close</button><p className="eyebrow">LEGION BESTIARY</p><h2>Enemies of the Ashen March</h2><div className="roster-grid">{[...FOES,...BOSSES].map((foe,index)=><article key={foe.name} className={index>=FOES.length?"elite-entry":""}><img src={`/art/${foe.art}.webp`} alt={foe.name}/><b>{foe.name}</b><small>{index>=FOES.length?"BOSS":"ENEMY"}</small></article>)}</div></section></div>}
+        {showSettings&&<div className="modal-backdrop" onClick={()=>setShowSettings(false)}><section className="settings-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowSettings(false)}>Close</button><p className="eyebrow">SETTINGS</p><h2>Field provisions</h2><label>Music <input type="range" defaultValue="70"/></label><label>Effects <input type="range" defaultValue="85"/></label><label><input type="checkbox" defaultChecked/> Screen shake</label><label><input type="checkbox" defaultChecked/> Reduced flashes</label></section></div>}
       </main>
     );
   }
@@ -269,7 +290,7 @@ export default function Home() {
         <div className="combat-center"><p>{log}</p><div className="chain-line" /></div>
         <div className="combatant demon">
           <div className="intent-card"><small>NEXT INTENT</small><b>{intent.name}</b><span>{intent.detail}{weakened && intent.damage ? " · weakened" : ""}</span></div>
-          <div className="character-art demon-art"><img src="/art/legion-warden.webp" alt="The horned Legion Warden in furnace-lit fortress armor" /></div>
+          <div className={`character-art demon-art ${impact?`hit ${impact}`:""}`}><img src="/art/legion-warden.webp" alt="The horned Legion Warden in furnace-lit fortress armor" /></div>
           <div className="status"><b>Legion Warden</b><span>{enemyHp}/72</span><div className="health enemy"><i style={{ width: `${(enemyHp / 72) * 100}%` }} /></div>{enemyArmor > 0 && <small>⬟ {enemyArmor} Armor</small>}</div>
           <div className="marks">{ELEMENTS.map((element) => marks[element.id] > 0 && <span key={element.id} className={element.id}>{element.sigil} {marks[element.id]}</span>)}</div>
         </div>
