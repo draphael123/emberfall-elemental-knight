@@ -120,3 +120,11 @@ export function canAfford(balance: number, price: number) {
 export function spend(balance: number, price: number) {
   return canAfford(balance, price) ? balance - price : balance;
 }
+
+export function deckCurve(costs: number[]) {
+  return [0, 1, 2, 3].map(cost => costs.filter(value => Math.min(3, Math.max(0, value)) === cost).length);
+}
+
+export function handDrawCount(retained: number, handLimit = 8, targetHand = 5) {
+  return Math.max(0, Math.min(targetHand - retained, handLimit - retained));
+}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canAfford, cityRank, eligibleRewards, expeditionGrade, hashSeed, incomingAttack, parseCampaignSave, reactionResult, relicChoices, removeAt, repairCampaignSave, restorationObjectives, rewardBand, scaledEnemyHp, seededShuffle, spend } from "../app/game-logic.ts";
+import { canAfford, cityRank, deckCurve, eligibleRewards, expeditionGrade, handDrawCount, hashSeed, incomingAttack, parseCampaignSave, reactionResult, relicChoices, removeAt, repairCampaignSave, restorationObjectives, rewardBand, scaledEnemyHp, seededShuffle, spend } from "../app/game-logic.ts";
 
 test("seeded shuffles are reproducible and seed-sensitive",()=>{
   const cards=["a","b","c","d","e","f"];
@@ -91,4 +91,9 @@ test("relic choices exclude relics already held",()=>{
 test("town and merchant purchases cannot create negative balances",()=>{
   assert.equal(canAfford(25,25),true);assert.equal(canAfford(24,25),false);
   assert.equal(spend(25,25),0);assert.equal(spend(24,25),24);assert.equal(spend(10,-1),10);
+});
+
+test("deck curve and retained-card draws remain bounded",()=>{
+  assert.deepEqual(deckCurve([0,1,1,2,2,2,4]),[1,2,3,1]);
+  assert.equal(handDrawCount(0),5);assert.equal(handDrawCount(2),3);assert.equal(handDrawCount(5),0);assert.equal(handDrawCount(9),0);
 });
