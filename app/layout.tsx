@@ -7,7 +7,7 @@ const body = Crimson_Pro({ variable: "--font-body", subsets: ["latin"] });
 const utility = IBM_Plex_Mono({ variable: "--font-utility", subsets: ["latin"], weight: ["400", "600"] });
 
 export const metadata: Metadata = {
-  title: "Emberfall — Elemental Knight",
+  title: "Emberfall  -  -  -  Elemental Knight",
   description: "Rebuild a fallen town and master elemental reactions in a dark fantasy deck-building roguelike.",
 };
 
