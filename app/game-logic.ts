@@ -67,3 +67,21 @@ export function parseCampaignSave(raw: string | null): CampaignSave | null {
     return null;
   }
 }
+
+export function repairCampaignSave(save: CampaignSave) {
+  const number = (key: string, fallback: number, min: number, max: number) => {
+    const value = save[key];
+    return typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
+  };
+  return {
+    ...save,
+    gold: number("gold", 45, 0, 9999),
+    supplies: number("supplies", 0, 0, 99),
+    forgeLevel: number("forgeLevel", 0, 0, 3),
+    sanctumLevel: number("sanctumLevel", 1, 1, 3),
+    hallLevel: number("hallLevel", 1, 1, 3),
+    difficulty: number("difficulty", 0, 0, 3),
+    campaignWins: number("campaignWins", 0, 0, 999),
+    townDay: number("townDay", 1, 1, 9999),
+  };
+}
