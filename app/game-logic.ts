@@ -85,3 +85,11 @@ export function repairCampaignSave(save: CampaignSave) {
     townDay: number("townDay", 1, 1, 9999),
   };
 }
+
+export function reactionResult(first: string, second: string, emberLens = false) {
+  const pair = [first, second].sort().join("+");
+  if (pair === "fire+water") return { name: "STEAM", damage: 0, weaken: 4, chain: 0 };
+  if (pair === "fire+lightning") return { name: "OVERLOAD", damage: emberLens ? 12 : 9, weaken: 0, chain: 0 };
+  if (pair === "lightning+water") return { name: "CONDUCT", damage: 6, weaken: 0, chain: 6 };
+  return null;
+}

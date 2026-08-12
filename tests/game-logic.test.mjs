@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cityRank, expeditionGrade, hashSeed, incomingAttack, parseCampaignSave, removeAt, repairCampaignSave, rewardBand, scaledEnemyHp, seededShuffle } from "../app/game-logic.ts";
+import { cityRank, expeditionGrade, hashSeed, incomingAttack, parseCampaignSave, reactionResult, removeAt, repairCampaignSave, rewardBand, scaledEnemyHp, seededShuffle } from "../app/game-logic.ts";
 
 test("seeded shuffles are reproducible and seed-sensitive",()=>{
   const cards=["a","b","c","d","e","f"];
@@ -59,4 +59,12 @@ test("campaign save parsing rejects corrupt and non-object data",()=>{
 test("campaign save repair clamps progression and economy values",()=>{
   const repaired=repairCampaignSave({gold:-10,supplies:500,forgeLevel:12,sanctumLevel:0,hallLevel:"bad",difficulty:99,townDay:-4});
   assert.equal(repaired.gold,0);assert.equal(repaired.supplies,99);assert.equal(repaired.forgeLevel,3);assert.equal(repaired.sanctumLevel,1);assert.equal(repaired.hallLevel,1);assert.equal(repaired.difficulty,3);assert.equal(repaired.townDay,1);
+});
+
+test("reaction table is symmetric and supports Ember Lens",()=>{
+  assert.deepEqual(reactionResult("fire","water"),reactionResult("water","fire"));
+  assert.deepEqual(reactionResult("water","lightning"),{name:"CONDUCT",damage:6,weaken:0,chain:6});
+  assert.equal(reactionResult("fire","lightning")?.damage,9);
+  assert.equal(reactionResult("fire","lightning",true)?.damage,12);
+  assert.equal(reactionResult("fire","fire"),null);
 });
