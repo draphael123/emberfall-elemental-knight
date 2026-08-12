@@ -12,7 +12,14 @@ A playable vertical slice for a dark-fantasy deck-building roguelike about rebui
 - Steam weakens, Conduct chains damage, and Overload delivers burst damage
 - Permanent townspeople, blueprints, branching card reforges, building tiers, gifts, deeds, and Oath difficulty levels
 - Licensed CC0 music, synthesized combat effects, accessibility controls, tutorial, rulebook, bestiary, and local saves
-- Responsive browser presentation
+- Responsive browser presentation with touch-sized controls, compact mobile intents, loading/error recovery, and install metadata
+- Restoration ledger identifies the next permanent city objective; save values are validated and repaired on load
+
+## Quality baseline
+
+- `npm test` builds the production application and runs gameplay, balance, persistence, accessibility, asset, and presentation checks
+- `npm run lint` validates authored source while excluding generated deployment output
+- Desktop and 390 x 844 mobile flows are verified against the production URL
 
 ## Run locally
 
