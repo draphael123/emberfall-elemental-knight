@@ -66,3 +66,6 @@ test("retreat loses ordinary resources but preserves campaign state",()=>{
   for(const reset of ["setGold(runGoldStart)","setSupplies(runSuppliesStart)","setRunDeck([])","setRelics([])"])assert.ok(retreat.includes(reset));
   for(const permanent of ["setRescued","setBlueprint","setForgeLevel","setCampaignWins"])assert.ok(!retreat.includes(permanent));
 });
+test("defeat restores only the pre-expedition resource bank",()=>{
+  assert.match(source,/screen!=="defeat"/);assert.match(source,/setGold\(runGoldStart\)/);assert.match(source,/setSupplies\(runSuppliesStart\)/);assert.match(source,/setRelics\(\[\]\)/);
+});
