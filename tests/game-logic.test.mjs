@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cityRank, expeditionGrade, hashSeed, incomingAttack, parseCampaignSave, reactionResult, removeAt, repairCampaignSave, rewardBand, scaledEnemyHp, seededShuffle } from "../app/game-logic.ts";
+import { cityRank, expeditionGrade, hashSeed, incomingAttack, parseCampaignSave, reactionResult, removeAt, repairCampaignSave, restorationObjectives, rewardBand, scaledEnemyHp, seededShuffle } from "../app/game-logic.ts";
 
 test("seeded shuffles are reproducible and seed-sensitive",()=>{
   const cards=["a","b","c","d","e","f"];
@@ -67,4 +67,11 @@ test("reaction table is symmetric and supports Ember Lens",()=>{
   assert.equal(reactionResult("fire","lightning")?.damage,9);
   assert.equal(reactionResult("fire","lightning",true)?.damage,12);
   assert.equal(reactionResult("fire","fire"),null);
+});
+
+test("restoration checklist tracks rescues and tier-three buildings",()=>{
+  const early=restorationObjectives({rescued:false,blueprint:false,wandererRescued:false,forgeLevel:0,sanctumLevel:1,hallLevel:1});
+  assert.equal(early.filter(item=>item.done).length,0);
+  const complete=restorationObjectives({rescued:true,blueprint:true,wandererRescued:true,forgeLevel:3,sanctumLevel:3,hallLevel:3});
+  assert.equal(complete.filter(item=>item.done).length,6);
 });

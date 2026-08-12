@@ -93,3 +93,14 @@ export function reactionResult(first: string, second: string, emberLens = false)
   if (pair === "lightning+water") return { name: "CONDUCT", damage: 6, weaken: 0, chain: 6 };
   return null;
 }
+
+export function restorationObjectives(state: { rescued: boolean; blueprint: boolean; wandererRescued: boolean; forgeLevel: number; sanctumLevel: number; hallLevel: number }) {
+  return [
+    { done: state.rescued, label: "Rescue Mara" },
+    { done: state.blueprint, label: "Recover the Forge Foundation" },
+    { done: state.wandererRescued, label: "Find Ilyra" },
+    { done: state.forgeLevel >= 3, label: "Complete the Blacksmith" },
+    { done: state.sanctumLevel >= 3, label: "Restore the Sanctum" },
+    { done: state.hallLevel >= 3, label: "Complete the Expedition Hall" },
+  ];
+}
