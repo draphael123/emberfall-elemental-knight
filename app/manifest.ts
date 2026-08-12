@@ -1,0 +1,14 @@
+import type { MetadataRoute } from "next";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "Emberfall — Elemental Knight",
+    short_name: "Emberfall",
+    description: "Rebuild a fallen city and master elemental reactions in a dark fantasy deckbuilder.",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#11100f",
+    theme_color: "#b8934e",
+    icons: [{ src: "/art/elemental-knight.webp", sizes: "512x512", type: "image/webp", purpose: "any" }],
+  };
+}
