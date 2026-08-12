@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/set-state-in-effect, jsx-a11y/media-has-caption, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-element-interactions, @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { cityRank as getCityRank, incomingAttack, scaledEnemyHp, seededShuffle } from "./game-logic";
+import { cityRank as getCityRank, incomingAttack, rewardBand, scaledEnemyHp, seededShuffle } from "./game-logic";
 
 type Element = "fire" | "water" | "lightning";
 type MarkState = Record<Element, number>;
@@ -336,7 +336,7 @@ export default function Home() {
   function finishNode(){if(nodeType)setRouteHistory(v=>[...v,nodeType[0].toUpperCase()+nodeType.slice(1)]);setMapStep(v=>v+1);setNodeType(null)}
   function removeCard(){const current=runDeck.length?runDeck:deck;if(current.length<=8)return;setRunDeck(current.slice(0,-1));setGold(v=>v-25);setTownMessage("The peddler burns one unwanted technique.")}
   function claimReward(card?:Card){if(card)setRunDeck(v=>[...(v.length?v:deck),card]);setGold(v=>v+(elite?20:10));setSupplies(v=>v+(elite?2:1));setEncountersCleared(v=>v+1);if(elite){setRelicChoice(runShuffle(RELICS.filter(r=>!relics.includes(r.name)),`relic-${mapStep}`).slice(0,2));return}setMapStep(v=>v+1);setScreen("map")}
-  function rewardComparison(card:Card){const current=runDeck.length?runDeck:deck;const same=current.filter(c=>c.element===card.element);const average=same.length?Math.round(same.reduce((sum,c)=>sum+(c.damage||c.block||0),0)/same.length):0;const value=card.damage||card.block||0;return value>average?"Above deck average":value===average?"Matches deck average":"Utility or setup pick"}
+  function rewardComparison(card:Card){const current=runDeck.length?runDeck:deck;const same=current.filter(c=>c.element===card.element);const average=same.length?Math.round(same.reduce((sum,c)=>sum+(c.damage||c.block||0),0)/same.length):0;return rewardBand(card.damage||card.block||0,average)}
   function chooseRelic(name:string){setRelics(v=>[...v,name]);setRelicChoice(null);setMapStep(v=>v+1);setScreen("map")}
   function reforge(card:Card,path:"power"|"mastery"){if(gold<25||upgraded.includes(card.id))return;setGold(v=>v-25);setUpgraded(v=>[...v,card.id]);setUpgradePaths(v=>({...v,[card.id]:path}));setForgeLevel(v=>Math.min(3,v+1));setForgeTarget(null);setTownMessage(`${card.name} follows the ${path==="power"?"Power path: +3 damage or Guard":"Mastery path: costs 1 less energy"}.`)}
 

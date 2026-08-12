@@ -35,3 +35,22 @@ export function cityRank(score: number) {
   if (score >= 5) return "Reclaimed Ward";
   return "Last Refuge";
 }
+
+export function removeAt<T>(items: T[], index: number): T[] {
+  if (index < 0 || index >= items.length) return [...items];
+  return items.filter((_, itemIndex) => itemIndex !== index);
+}
+
+export function rewardBand(value: number, average: number) {
+  if (value > average) return "Above deck average";
+  if (value === average) return "Matches deck average";
+  return "Utility or setup pick";
+}
+
+export function expeditionGrade(reactions: number, elites: number, damageTaken: number) {
+  const score = reactions * 3 + elites * 5 - damageTaken / 8;
+  if (score >= 25) return "S";
+  if (score >= 16) return "A";
+  if (score >= 8) return "B";
+  return "C";
+}

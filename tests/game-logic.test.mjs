@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cityRank, hashSeed, incomingAttack, scaledEnemyHp, seededShuffle } from "../app/game-logic.ts";
+import { cityRank, expeditionGrade, hashSeed, incomingAttack, removeAt, rewardBand, scaledEnemyHp, seededShuffle } from "../app/game-logic.ts";
 
 test("seeded shuffles are reproducible and seed-sensitive",()=>{
   const cards=["a","b","c","d","e","f"];
@@ -29,4 +29,22 @@ test("town ranks culminate in a fortified city",()=>{
   assert.equal(cityRank(5),"Reclaimed Ward");
   assert.equal(cityRank(8),"Rising Stronghold");
   assert.equal(cityRank(11),"Fortified City");
+});
+
+test("deck removal removes only the chosen copy",()=>{
+  assert.deepEqual(removeAt(["Cut","Guard","Cut"],2),["Cut","Guard"]);
+  assert.deepEqual(removeAt(["Cut"],4),["Cut"]);
+});
+
+test("reward comparisons use stable value bands",()=>{
+  assert.equal(rewardBand(10,7),"Above deck average");
+  assert.equal(rewardBand(7,7),"Matches deck average");
+  assert.equal(rewardBand(0,7),"Utility or setup pick");
+});
+
+test("expedition grades reward reactions and elite risk",()=>{
+  assert.equal(expeditionGrade(10,1,20),"S");
+  assert.equal(expeditionGrade(5,1,30),"A");
+  assert.equal(expeditionGrade(3,0,8),"B");
+  assert.equal(expeditionGrade(0,0,40),"C");
 });
