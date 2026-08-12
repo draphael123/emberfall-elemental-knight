@@ -264,19 +264,19 @@ export default function Home() {
       <section className="battlefield">
         <div className="combatant knight">
           <div className="status"><b>Elemental Knight</b><span>{playerHp}/58</span><div className="health"><i style={{ width: `${(playerHp / 58) * 100}%` }} /></div>{guard > 0 && <small>◆ {guard} Guard</small>}</div>
-          <div className="knight-art"><span className="shield-emblem">✦</span><i className="sword" /><i className="shield" /></div>
+          <div className="character-art knight-art"><img src="/art/elemental-knight.png" alt="The Elemental Knight in blackened plate with sword and shield" /></div>
         </div>
         <div className="combat-center"><p>{log}</p><div className="chain-line" /></div>
         <div className="combatant demon">
           <div className="intent-card"><small>NEXT INTENT</small><b>{intent.name}</b><span>{intent.detail}{weakened && intent.damage ? " · weakened" : ""}</span></div>
-          <div className="demon-art"><i className="horn left"/><i className="horn right"/><span>W</span></div>
+          <div className="character-art demon-art"><img src="/art/legion-warden.png" alt="The horned Legion Warden in furnace-lit fortress armor" /></div>
           <div className="status"><b>Legion Warden</b><span>{enemyHp}/72</span><div className="health enemy"><i style={{ width: `${(enemyHp / 72) * 100}%` }} /></div>{enemyArmor > 0 && <small>⬟ {enemyArmor} Armor</small>}</div>
           <div className="marks">{ELEMENTS.map((element) => marks[element.id] > 0 && <span key={element.id} className={element.id}>{element.sigil} {marks[element.id]}</span>)}</div>
         </div>
       </section>
       <section className="hand-zone">
         <div className="energy-orb"><b>{energy}</b><span>ENERGY</span></div>
-        <div className="hand">{hand.map((card) => <button key={card.id} disabled={card.cost > energy} className={`card ${card.element ?? "steel"}`} onClick={() => playCard(card)}><span className="cost">{card.cost}</span><small>{card.element ?? "KNIGHT"}</small><h3>{card.name}</h3><div className="card-art">{card.element === "fire" ? "✦" : card.element === "water" ? "◒" : card.element === "lightning" ? "ϟ" : "⚔"}</div><p>{card.text}</p></button>)}</div>
+        <div className="hand">{hand.map((card) => <button key={card.id} disabled={card.cost > energy} className={`card ${card.element ?? "steel"}`} onClick={() => playCard(card)}><span className="cost">{card.cost}</span><small>{card.element ?? "KNIGHT"}</small><h3>{card.name}</h3><div className={`card-art ${card.element ?? "steel"}`}><span>{card.element ? "" : "⚔"}</span></div><p>{card.text}</p></button>)}</div>
         <button className="end-turn" onClick={endTurn}>End turn <span>→</span></button>
       </section>
       <footer className="combat-footer"><span>Draw pile <b>{drawPile.length}</b></span><span>Discard <b>{discard.length}</b></span><span>Reactions: <b>Steam · Conduct · Overload</b></span></footer>
