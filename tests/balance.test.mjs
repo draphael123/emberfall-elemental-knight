@@ -17,6 +17,9 @@ test("reward pool supports multiple deck archetypes",()=>{
 test("all regular foes have health, art, passives, and intent patterns",()=>{
   for(const foe of ["Ash Hound","Cinder Cultist","Gate Reaver","Drowned Penitent","Storm Imp","Ironbound Brute"]){assert.match(source,new RegExp(`"${foe}"`));assert.match(source,new RegExp(`"${foe}".*passive`));assert.match(source,new RegExp(`"${foe}".*name:`,"s"))}
 });
+test("bestiary passives teach practical counters",()=>{
+  for(const hint of ["early burst","Cleanse Burn","Save Guard or Steam","outpace Regeneration","Charges the next","Prepare Steam"])assert.match(source,new RegExp(hint,"i"));
+});
 
 test("reaction damage remains bounded against first-region enemies",()=>{
   const overload=9,conduct=6;assert.ok(overload<20);assert.ok(conduct<15);assert.ok(overload>conduct);
