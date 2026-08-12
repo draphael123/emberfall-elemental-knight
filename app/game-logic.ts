@@ -54,3 +54,16 @@ export function expeditionGrade(reactions: number, elites: number, damageTaken: 
   if (score >= 8) return "B";
   return "C";
 }
+
+export type CampaignSave = Record<string, unknown>;
+
+export function parseCampaignSave(raw: string | null): CampaignSave | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw);
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    return value as CampaignSave;
+  } catch {
+    return null;
+  }
+}

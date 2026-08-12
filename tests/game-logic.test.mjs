@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cityRank, expeditionGrade, hashSeed, incomingAttack, removeAt, rewardBand, scaledEnemyHp, seededShuffle } from "../app/game-logic.ts";
+import { cityRank, expeditionGrade, hashSeed, incomingAttack, parseCampaignSave, removeAt, rewardBand, scaledEnemyHp, seededShuffle } from "../app/game-logic.ts";
 
 test("seeded shuffles are reproducible and seed-sensitive",()=>{
   const cards=["a","b","c","d","e","f"];
@@ -47,4 +47,11 @@ test("expedition grades reward reactions and elite risk",()=>{
   assert.equal(expeditionGrade(5,1,30),"A");
   assert.equal(expeditionGrade(3,0,8),"B");
   assert.equal(expeditionGrade(0,0,40),"C");
+});
+
+test("campaign save parsing rejects corrupt and non-object data",()=>{
+  assert.equal(parseCampaignSave(null),null);
+  assert.equal(parseCampaignSave("not-json"),null);
+  assert.equal(parseCampaignSave("[]"),null);
+  assert.deepEqual(parseCampaignSave('{"gold":45,"rescued":true}'),{gold:45,rescued:true});
 });
