@@ -43,8 +43,8 @@ test("audio source is licensed and player controlled",async()=>{
 });
 
 test("browser presentation has resilient loading error and install surfaces",async()=>{
-  const [loading,error,manifest]=await Promise.all([readFile(new URL("app/loading.tsx",root),"utf8"),readFile(new URL("app/error.tsx",root),"utf8"),readFile(new URL("app/manifest.ts",root),"utf8")]);
-  assert.match(loading,/Lighting the western gate/);assert.match(error,/campaign record remains on this device/);assert.match(error,/reset/);assert.match(manifest,/display: "standalone"/);assert.match(manifest,/theme_color: "#b8934e"/);
+  const [loading,error,manifest,staticHtml]=await Promise.all([readFile(new URL("app/loading.tsx",root),"utf8"),readFile(new URL("app/error.tsx",root),"utf8"),readFile(new URL("public/manifest.webmanifest",root),"utf8"),readFile(new URL("static/index.html",root),"utf8")]);
+  assert.match(loading,/Lighting the western gate/);assert.match(error,/campaign record remains on this device/);assert.match(error,/reset/);assert.equal(JSON.parse(manifest).display,"standalone");assert.match(manifest,/#b8934e/);assert.match(staticHtml,/rel="manifest"/);
 });
 
 test("town presentation exposes a concrete restoration objective",async()=>{
