@@ -55,9 +55,9 @@ const ENEMY_INTENTS = [
 ];
 
 const FOES = [
-  { name: "Ash Hound", art: "ash-hound" }, { name: "Cinder Cultist", art: "cinder-cultist" },
-  { name: "Gate Reaver", art: "gate-reaver" }, { name: "Drowned Penitent", art: "drowned-penitent" },
-  { name: "Storm Imp", art: "storm-imp" }, { name: "Ironbound Brute", art: "ironbound-brute" },
+  { name: "Ash Hound", art: "ash-hound", hp: 34 }, { name: "Cinder Cultist", art: "cinder-cultist", hp: 40 },
+  { name: "Gate Reaver", art: "gate-reaver", hp: 48 }, { name: "Drowned Penitent", art: "drowned-penitent", hp: 52 },
+  { name: "Storm Imp", art: "storm-imp", hp: 38 }, { name: "Ironbound Brute", art: "ironbound-brute", hp: 64 },
 ];
 const BOSSES = [
   { name: "Furnace Bishop", art: "furnace-bishop" }, { name: "Tempest Wyvern", art: "tempest-wyvern" },
@@ -68,7 +68,7 @@ const emptyMarks = (): MarkState => ({ fire: 0, water: 0, lightning: 0 });
 const shuffle = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
 
 export default function Home() {
-  const [screen, setScreen] = useState<"town" | "attune" | "combat" | "victory" | "defeat">("town");
+  const [screen, setScreen] = useState<"town" | "attune" | "map" | "combat" | "reward" | "victory" | "defeat">("town");
   const [selected, setSelected] = useState<Element[]>(["fire", "water"]);
   const [playerHp, setPlayerHp] = useState(58);
   const [guard, setGuard] = useState(0);
@@ -90,6 +90,9 @@ export default function Home() {
   const [showRoster, setShowRoster] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [impact, setImpact] = useState("");
+  const [foeIndex, setFoeIndex] = useState(0);
+  const [mapStep, setMapStep] = useState(0);
+  const activeFoe = mapStep >= 3 ? { name: "Legion Warden", art: "legion-warden", hp: 72 } : FOES[foeIndex];
 
   const deck = useMemo(
     () => [...BASE_CARDS, ...ELEMENT_CARDS[selected[0]], ...ELEMENT_CARDS[selected[1]]],
@@ -103,13 +106,15 @@ export default function Home() {
     });
   }
 
-  function startCombat() {
+  function startCombat(index = 0) {
+    const target = mapStep >= 3 ? { name: "Legion Warden", hp: 72 } : FOES[index];
+    setFoeIndex(index);
     const pile = shuffle(deck);
     setHand(pile.slice(0, 5));
     setDrawPile(pile.slice(5));
     setDiscard([]);
     setPlayerHp(58);
-    setEnemyHp(72);
+    setEnemyHp(target.hp);
     setEnemyArmor(0);
     setGuard(0);
     setEnergy(3);
@@ -117,7 +122,7 @@ export default function Home() {
     setIntentIndex(0);
     setMarks(emptyMarks());
     setWeakened(false);
-    setLog("The gate groans. The Legion Warden advances.");
+    setLog(`${target.name} bars the road.`);
     setScreen("combat");
   }
 
@@ -181,9 +186,9 @@ export default function Home() {
       setEnemyArmor((value) => Math.max(0, value - dealt));
       setEnemyHp(Math.max(0, nextHp));
       if (nextHp <= 0) {
-        setRescued(true);
-        setBlueprint(true);
-        setScreen("victory");
+        setImpact("death");
+        if (mapStep >= 3) { setRescued(true); setBlueprint(true); window.setTimeout(()=>setScreen("victory"),650); }
+        else window.setTimeout(()=>setScreen("reward"),650);
       }
     }
     setLog(reaction || `${card.name} answers the Warden.`);
@@ -268,10 +273,14 @@ export default function Home() {
         <section className="element-choices">
           {ELEMENTS.map((element) => <button key={element.id} className={`element-choice ${element.id} ${selected.includes(element.id) ? "selected" : ""}`} onClick={() => toggleElement(element.id)}><span className="element-sigil">{element.sigil}</span><small>{selected.includes(element.id) ? `VOW ${selected.indexOf(element.id) + 1}` : "UNBOUND"}</small><h2>{element.name}</h2><p>{element.line}</p></button>)}
         </section>
-        <div className="attune-footer"><div><b>{selected.length}/2 vows bound</b><small>Starting deck · 12 cards</small></div><button className="primary" disabled={selected.length !== 2} onClick={startCombat}>Cross the gate <span>→</span></button></div>
+        <div className="attune-footer"><div><b>{selected.length}/2 vows bound</b><small>Starting deck · 12 cards</small></div><button className="primary" disabled={selected.length !== 2} onClick={()=>setScreen("map")}>Cross the gate <span>→</span></button></div>
       </main>
     );
   }
+
+  if(screen==="map") return <main className="expedition-screen"><header className="combat-top"><button onClick={()=>setScreen("town")}>Retreat</button><div><span>THE ASHEN MARCH</span><b>Choose a road</b></div><div className="turn">DEPTH <b>{mapStep+1}</b></div></header><section className="expedition-copy"><p className="eyebrow">BRANCHING EXPEDITION</p><h1>{mapStep>=3?"The fortress gate":"The road divides in the rain."}</h1><p>{mapStep>=3?"A colossal shadow moves behind the portcullis.":"Enemy concentrations shift with every route. Choose what your deck can answer."}</p></section><section className="route-choices">{mapStep>=3?<button className="encounter boss-encounter" onClick={()=>startCombat(0)}><img src="/art/legion-warden.webp" alt="Legion Warden"/><span>Boss</span><b>Legion Warden</b><small>Blueprint · rescued survivor</small></button>:[mapStep%6,(mapStep+2)%6].map((index,branch)=><button key={index} className={`encounter ${branch?"elite-route":""}`} onClick={()=>startCombat(index)}><img src={`/art/${FOES[index].art}.webp`} alt={FOES[index].name}/><span>{branch?"Dangerous route":"Combat"}</span><b>{FOES[index].name}</b><small>{branch?"Relic chance":"Card reward"}</small></button>)}</section><div className="route-progress">{[0,1,2,3].map(i=><i key={i} className={i<=mapStep?"reached":i===3?"boss-point":""}/>)}</div></main>;
+
+  if(screen==="reward") return <main className="reward-screen"><p className="eyebrow">ROAD CLEARED</p><h1>Choose what survives the march.</h1><div className="reward-cards"><button onClick={()=>{setMapStep(v=>v+1);setPlayerHp(v=>Math.min(58,v+8));setScreen("map")}}><b>Field Mending</b><span>Recover 8 health</span></button><button onClick={()=>{setMapStep(v=>v+1);setScreen("map")}}><b>Tempered Edge</b><span>Prepare for the next battle</span></button><button onClick={()=>{setMapStep(v=>v+1);setScreen("map")}}><b>Elemental Memory</b><span>Study a rare reaction</span></button></div></main>;
 
   if (screen === "victory" || screen === "defeat") {
     const won = screen === "victory";
@@ -290,8 +299,8 @@ export default function Home() {
         <div className="combat-center"><p>{log}</p><div className="chain-line" /></div>
         <div className="combatant demon">
           <div className="intent-card"><small>NEXT INTENT</small><b>{intent.name}</b><span>{intent.detail}{weakened && intent.damage ? " · weakened" : ""}</span></div>
-          <div className={`character-art demon-art ${impact?`hit ${impact}`:""}`}><img src="/art/legion-warden.webp" alt="The horned Legion Warden in furnace-lit fortress armor" /></div>
-          <div className="status"><b>Legion Warden</b><span>{enemyHp}/72</span><div className="health enemy"><i style={{ width: `${(enemyHp / 72) * 100}%` }} /></div>{enemyArmor > 0 && <small>⬟ {enemyArmor} Armor</small>}</div>
+          <div className={`character-art demon-art entering ${impact?`hit ${impact}`:""}`}><img src={`/art/${activeFoe.art}.webp`} alt={activeFoe.name} /></div>
+          <div className="status"><b>{activeFoe.name}</b><span>{enemyHp}/{activeFoe.hp}</span><div className="health enemy"><i style={{ width: `${(enemyHp / activeFoe.hp) * 100}%` }} /></div>{enemyArmor > 0 && <small>⬟ {enemyArmor} Armor</small>}</div>
           <div className="marks">{ELEMENTS.map((element) => marks[element.id] > 0 && <span key={element.id} className={element.id}>{element.sigil} {marks[element.id]}</span>)}</div>
         </div>
       </section>
