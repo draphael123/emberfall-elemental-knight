@@ -50,6 +50,12 @@ test("enemy mechanics are telegraphed in combat UI",()=>{
   for(const state of ["enemyRage","enemyRegeneration","enemyCharged","enemyThorns","bossPhase","effectiveIntent"])assert.match(source,new RegExp(state));
   for(const label of ["Rage","Regeneration","Charged","Cinder Ward","BOSS PHASE"])assert.match(source,new RegExp(label));
 });
+test("all incoming damage routes through shared defeat handling",()=>{
+  assert.match(source,/function hurtPlayer/);for(const sourceName of ["Cinder Ward","Burn","secondFoe.name","activeFoe.name"])assert.match(source,new RegExp(`hurtPlayer\\([^;]*${sourceName}`));
+});
+test("elemental decks support both reactions and stored-mark finishers",()=>{
+  for(const mechanic of ["markBurst","Vowbreaker","Brand Harvest","Cleansing Rain","cleanse"])assert.match(source,new RegExp(mechanic,"i"));assert.match(source,/setMarks\(emptyMarks\(\)\)/);
+});
 
 test("elite encounters provide target selection and varied relic choice",()=>{
   assert.match(source,/targetSlot/);assert.match(source,/escort-target/);assert.match(source,/relicChoice/);assert.ok([...source.matchAll(/name:"(?:Stormglass|Pilgrim Bell|Bastion Sigil|Ember Lens)"/g)].length===4);
@@ -57,6 +63,6 @@ test("elite encounters provide target selection and varied relic choice",()=>{
 
 test("retreat loses ordinary resources but preserves campaign state",()=>{
   const retreat=source.match(/function retreat\(\)\{([^}]|\}(?!\n))*?setScreen\("town"\)\}/s)?.[0]??"";
-  for(const reset of ["setGold(0)","setSupplies(0)","setRunDeck([])","setRelics([])"])assert.ok(retreat.includes(reset));
+  for(const reset of ["setGold(runGoldStart)","setSupplies(runSuppliesStart)","setRunDeck([])","setRelics([])"])assert.ok(retreat.includes(reset));
   for(const permanent of ["setRescued","setBlueprint","setForgeLevel","setCampaignWins"])assert.ok(!retreat.includes(permanent));
 });

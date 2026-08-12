@@ -21,6 +21,8 @@ type Card = {
   rarity?: "common"|"uncommon"|"rare";
   heal?: number;
   armorBreak?: number;
+  markBurst?: number;
+  cleanse?: boolean;
 };
 
 const ELEMENTS: { id: Element; name: string; sigil: string; line: string }[] = [
@@ -123,6 +125,9 @@ const REWARD_CARDS: Card[] = [
   { id:"deep-current",name:"Deep Current",cost:2,element:"water",rarity:"rare",text:"Gain 12 Guard. Draw 2.",block:12,draw:2 },
   { id:"thunderhead",name:"Thunderhead",cost:2,element:"lightning",rarity:"uncommon",text:"Deal 12 damage. Apply Lightning.",damage:12 },
   { id:"sunder",name:"Sunder",cost:1,rarity:"uncommon",text:"Deal 5 damage. Break 8 Armor.",damage:5,armorBreak:8 },
+  { id:"vowbreaker",name:"Vowbreaker",cost:2,rarity:"rare",text:"Deal 8 damage, plus 4 for every elemental mark. Consume all marks.",damage:8,markBurst:4 },
+  { id:"cleansing-rain",name:"Cleansing Rain",cost:1,element:"water",rarity:"uncommon",text:"Gain 7 Guard. Remove Burn and Vulnerable.",block:7,cleanse:true },
+  { id:"brand-harvest",name:"Brand Harvest",cost:1,element:"fire",rarity:"uncommon",text:"Deal 5 damage, plus 2 for every elemental mark. Consume all marks.",damage:5,markBurst:2 },
 ];
 
 const emptyMarks = (): MarkState => ({ fire: 0, water: 0, lightning: 0 });
@@ -178,6 +183,7 @@ export default function Home() {
   const [forgeLevel, setForgeLevel] = useState(0);
   const [gold, setGold] = useState(45);
   const [runGoldStart, setRunGoldStart] = useState(45);
+  const [runSuppliesStart, setRunSuppliesStart] = useState(0);
   const [supplies, setSupplies] = useState(0);
   const [nodeType, setNodeType] = useState<"camp"|"merchant"|"event"|null>(null);
   const [merchantStock, setMerchantStock] = useState<Card[]>([]);
@@ -267,7 +273,7 @@ export default function Home() {
     });
   }
   function preview(card:Card){
-    const suffix=[card.heal?`heal ${card.heal}`:"",card.armorBreak?`break ${card.armorBreak} Armor`:"",card.retain?"retain":"",card.exhaust?"exhaust":""].filter(Boolean).join("  ");
+    const suffix=[card.heal?`heal ${card.heal}`:"",card.markBurst?`+${card.markBurst} per mark`:"",card.cleanse?"cleanse":"",card.armorBreak?`break ${card.armorBreak} Armor`:"",card.retain?"retain":"",card.exhaust?"exhaust":""].filter(Boolean).join("  ");
     if(!card.element){const main=card.damage?`${((card.damage+cardBoost(card))*(card.hits??1))} damage`:card.block?`${card.block+cardBoost(card)} Guard`:"Utility";return `${main}${suffix?`  ${suffix}`:""}`}
     const partner=(Object.keys(marks) as Element[]).find(e=>e!==card.element&&marks[e]>0);if(!partner)return `Applies ${card.element} mark`;
     const pair=[card.element,partner].sort().join("+");if(pair==="fire+water")return `STEAM - weaken next attack${suffix?`  ${suffix}`:""}`;if(pair==="fire+lightning")return `OVERLOAD - +${9+(relics.includes("Ember Lens")?3:0)} damage${suffix?`  ${suffix}`:""}`;return `CONDUCT - +6 and chain${suffix?`  ${suffix}`:""}`;
@@ -316,12 +322,12 @@ export default function Home() {
     if(!localStorage.getItem("emberfall-tutorial-seen")){setShowTutorial(true);localStorage.setItem("emberfall-tutorial-seen","yes")}
     setScreen("combat");
   }
-  function beginExpedition(){setRunGoldStart(gold);setTownDay(v=>v+1);setMapStep(0);setEncountersCleared(0);setRouteHistory([]);setRunDeck([]);setShuffleCount(0);setRunSeed(Math.random().toString(36).slice(2,8).toUpperCase());setScreen("attune")}
+  function beginExpedition(){setRunGoldStart(gold);setRunSuppliesStart(supplies);setTownDay(v=>v+1);setMapStep(0);setEncountersCleared(0);setRouteHistory([]);setRunDeck([]);setShuffleCount(0);setRunSeed(Math.random().toString(36).slice(2,8).toUpperCase());setScreen("attune")}
   function spendSupply(){if(supplies<=0||playerHp>=maxHp)return;setSupplies(v=>v-1);setPlayerHp(v=>Math.min(maxHp,v+8));setTownMessage("A field ration restores 8 health before departure.")}
-  function retreat(){setGold(0);setSupplies(0);setRunDeck([]);setRelics([]);setRouteHistory([]);setTownMessage("The Knight returns without ordinary spoils. Blueprints and rescued people remain.");setScreen("town")}
+  function retreat(){setGold(runGoldStart);setSupplies(runSuppliesStart);setRunDeck([]);setRelics([]);setRouteHistory([]);setTownMessage("The Knight returns without expedition spoils. Banked town resources, blueprints, and rescued people remain.");setScreen("town")}
   function openNode(type:"camp"|"merchant"|"event") {setNodeType(type);if(type==="merchant")setMerchantStock(runShuffle(REWARD_CARDS.filter(card=>!card.element||selected.includes(card.element)),`merchant-${mapStep}`).slice(0,3));}
   function finishNode(){if(nodeType)setRouteHistory(v=>[...v,nodeType[0].toUpperCase()+nodeType.slice(1)]);setMapStep(v=>v+1);setNodeType(null)}
-  function removeCard(card?:Card){const current=runDeck.length?runDeck:deck;if(current.length<=8||gold<25)return;const chosen=card||current[current.length-1];const index=current.findIndex(item=>item.id===chosen.id);if(index<0)return;setRunDeck(current.filter((_,i)=>i!==index));setGold(v=>v-25);setTownMessage(`The peddler burns ${chosen.name} from the expedition deck.`)}
+  function removeCard(){const current=runDeck.length?runDeck:deck;if(current.length<=8)return;setRunDeck(current.slice(0,-1));setGold(v=>v-25);setTownMessage("The peddler burns one unwanted technique.")}
   function claimReward(card?:Card){if(card)setRunDeck(v=>[...(v.length?v:deck),card]);setGold(v=>v+(elite?20:10));setSupplies(v=>v+(elite?2:1));setEncountersCleared(v=>v+1);if(elite){setRelicChoice(runShuffle(RELICS.filter(r=>!relics.includes(r.name)),`relic-${mapStep}`).slice(0,2));return}setMapStep(v=>v+1);setScreen("map")}
   function rewardComparison(card:Card){const current=runDeck.length?runDeck:deck;const same=current.filter(c=>c.element===card.element);const average=same.length?Math.round(same.reduce((sum,c)=>sum+(c.damage||c.block||0),0)/same.length):0;const value=card.damage||card.block||0;return value>average?"Above deck average":value===average?"Matches deck average":"Utility or setup pick"}
   function chooseRelic(name:string){setRelics(v=>[...v,name]);setRelicChoice(null);setMapStep(v=>v+1);setScreen("map")}
@@ -343,6 +349,7 @@ export default function Home() {
     setDrawPile(pile);
     setDiscard(spent);
   }
+  function hurtPlayer(amount:number,source:string){if(amount<=0)return;setRunStats(v=>({...v,damageTaken:v.damageTaken+amount}));setPlayerHp(current=>{const next=Math.max(0,current-amount);if(next<=0){setLog(`${source} ends the expedition.`);window.setTimeout(()=>setScreen("defeat"),250)}return next})}
 
   function playCard(card: Card) {
     if (cardCost(card) > energy || screen !== "combat") return;
@@ -356,6 +363,7 @@ export default function Home() {
     if (card.block) setGuard((value) => value + card.block! + boost);
 
     let dealt = ((card.damage ?? 0) + (card.damage ? boost : 0)) * (card.hits??1);
+    if(card.markBurst){const markCount=marks.fire+marks.water+marks.lightning;dealt+=markCount*card.markBurst;setMarks(emptyMarks())}
     if(firstAttack&&dealt&&relics.includes("Stormglass")){dealt+=4;setFirstAttack(false)}else if(dealt)setFirstAttack(false);
     let reaction = "";
     const nextMarks = { ...marks };
@@ -394,7 +402,7 @@ export default function Home() {
       const absorbed = targetSlot===0?Math.min(enemyArmor, dealt):0;
       const hpDamage = dealt - absorbed;
       const nextHp = (targetSlot===0?enemyHp:secondHp) - hpDamage;
-      if(enemyThorns>0&&targetSlot===0){setPlayerHp(v=>Math.max(0,v-enemyThorns));setRunStats(v=>({...v,damageTaken:v.damageTaken+enemyThorns}))}
+      if(enemyThorns>0&&targetSlot===0)hurtPlayer(enemyThorns,"Cinder Ward");
       if(targetSlot===0){setEnemyArmor((value) => Math.max(0, value - dealt));setEnemyHp(Math.max(0, nextHp));if(mapStep>=3&&bossPhase===1&&nextHp>0&&nextHp<=Math.floor(foeMaxHp/2)){setBossPhase(2);setEnemyArmor(v=>v+12);setEnemyPhaseLabel("PHASE II  SIEGE WARD");window.setTimeout(()=>setEnemyPhaseLabel(""),1400);setLog("The Warden tears free of its chains and raises a 12-Armor siege ward.")}}else{setSecondHp(Math.max(0,nextHp));if(nextHp<=0)setTargetSlot(0)}
       if(reaction.includes("CONDUCT")&&secondFoe&&secondHp>0){if(targetSlot===0)setSecondHp(v=>Math.max(0,v-6));else setEnemyHp(v=>Math.max(0,v-6))}
       if (nextHp <= 0) {
@@ -407,6 +415,7 @@ export default function Home() {
     }
     if(card.burn)setEnemyBurn(value=>value+card.burn!);
     if(card.heal)setPlayerHp(v=>Math.min(maxHp,v+card.heal!));
+    if(card.cleanse){setPlayerBurn(0);setVulnerable(0)}
     if(card.armorBreak)setEnemyArmor(v=>Math.max(0,v-card.armorBreak!));
     const cardLog=reaction || `${card.name} strikes ${targetSlot===0?activeFoe.name:secondFoe?.name}.`;setLog(cardLog);setCombatHistory(v=>[cardLog,...v].slice(0,5));
     if (card.draw) drawCards(card.draw, hand.filter((item) => item.id !== card.id), drawPile, card.exhaust?discard:[...discard, card]);
@@ -427,15 +436,14 @@ export default function Home() {
       const attack = Math.max(0, Math.ceil((scaled - (weakened ? 4 : 0))*(vulnerable>0?1.5:1)));
       const damage = Math.max(0, attack - guard);
       const nextHp = playerHp - damage;
-      setPlayerHp(Math.max(0, nextHp));
-      setRunStats(v=>({...v,damageTaken:v.damageTaken+damage}));
+      hurtPlayer(damage,activeFoe.name);
       message = `${activeFoe.name} strikes for ${damage}${guard ? ` after ${guard} Guard` : ""}.${enemyBurn?` Burn deals ${enemyBurn}.`:""}`;
       setWeakened(false);
       setVulnerable(v=>Math.max(0,v-1));
       if(activeFoe.name==="Cinder Cultist")setPlayerBurn(v=>v+2);
       if(activeFoe.name==="Gate Reaver"&&intent.name==="Execution")setVulnerable(1);
       if(activeFoe.name==="Storm Imp")setEnemyCharged(intent.name==="Static Claw");
-      if(secondFoe&&secondHp>0){const escortDamage=Math.max(0,6-Math.max(0,guard-attack));setPlayerHp(v=>Math.max(0,v-escortDamage));message+=` ${secondFoe.name} follows for ${escortDamage}.`}
+      if(secondFoe&&secondHp>0){const escortDamage=Math.max(0,6-Math.max(0,guard-attack));hurtPlayer(escortDamage,secondFoe.name);message+=` ${secondFoe.name} follows for ${escortDamage}.`}
       if (nextHp <= 0) {
         setScreen("defeat");
         return;
@@ -446,7 +454,7 @@ export default function Home() {
       if(activeFoe.name==="Drowned Penitent")setEnemyRegeneration(v=>v+3);
       message = `${activeFoe.name} gains 7 demonic armor.${enemyBurn?` Burn deals ${enemyBurn}.`:""}`;
     }
-    if(playerBurn>0){const burnedHp=Math.max(0,playerHp-playerBurn);setPlayerHp(burnedHp);setPlayerBurn(v=>Math.max(0,v-1));if(burnedHp<=0){setScreen("defeat");return;}}
+    if(playerBurn>0){hurtPlayer(playerBurn,"Burn");setPlayerBurn(v=>Math.max(0,v-1))}
     const retained=hand.filter(card=>card.retain);const spent = [...discard, ...hand.filter(card=>!card.retain)];
     let pile = [...drawPile];
     if (pile.length < 5) {
