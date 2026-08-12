@@ -23,12 +23,12 @@ test("game source contains the complete vertical-slice systems", async () => {
 });
 
 test("production metadata and public assets are game-specific", async()=>{
-  const layout=await readFile(new URL("app/layout.tsx",root),"utf8");assert.match(layout,/title:\s*"Emberfall/i);assert.match(layout,/deck-building roguelike/i);assert.doesNotMatch(layout,/Starter Project|codex-preview/i);
+  const layout=await readFile(new URL("app/layout.tsx",root),"utf8");assert.match(layout,/title:\s*"Emberfall - Elemental Knight"/i);assert.match(layout,/deck-building roguelike/i);assert.match(layout,/openGraph/);assert.doesNotMatch(layout,/Starter Project|codex-preview/i);
   for(const asset of ["elemental-knight.webp","legion-warden.webp","emberfall-town.webp","western-gate-battlefield.webp"])await access(new URL(`public/art/${asset}`,root));
 });
 
 test("campaign persistence covers player-facing permanent progression",async()=>{
-  const page=await readFile(new URL("app/page.tsx",root),"utf8");for(const field of ["forgeLevel","sanctumLevel","hallLevel","buildingPos","campaignWins","difficulty","wandererRescued","upgraded"])assert.match(page,new RegExp(field));assert.match(page,/Reset campaign data/);
+  const page=await readFile(new URL("app/page.tsx",root),"utf8");for(const field of ["forgeLevel","sanctumLevel","hallLevel","buildingPos","campaignWins","difficulty","wandererRescued","upgraded","upgradePaths","ilyraGift","quartermasterGift"])assert.match(page,new RegExp(field));assert.match(page,/Reset campaign data/);
 });
 
 test("accessibility controls and keyboard paths are present",async()=>{

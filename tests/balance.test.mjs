@@ -43,7 +43,7 @@ test("displayed run seeds control reward and shuffle order",()=>{
 });
 
 test("combat resource limits prevent runaway hands",()=>{
-  assert.match(source,/handLimit\]\s*=\s*useState\(8\)/);assert.match(source,/nextHand\.length<handLimit/);assert.match(source,/setEnergy\(3\+\(sanctumLevel>=2\?1:0\)\)/);
+  assert.match(source,/handLimit\]\s*=\s*useState\(8\)/);assert.match(source,/nextHand\.length<handLimit/);assert.match(source,/setEnergy\(3\+\(sanctumLevel>=2\?1:0\)\)/);assert.match(source,/setEnergy\(3\);/);
 });
 
 test("enemy mechanics are telegraphed in combat UI",()=>{

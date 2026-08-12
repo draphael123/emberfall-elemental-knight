@@ -466,7 +466,7 @@ export default function Home() {
     const drawCount=Math.max(0,Math.min(5-retained.length,handLimit-retained.length));setHand([...retained,...pile.slice(0,drawCount)]);
     setDrawPile(pile.slice(drawCount));
     setGuard(0);
-    setEnergy(3+(sanctumLevel>=2?1:0));
+    setEnergy(3);
     setTurn((value) => value + 1);
     setIntentIndex((value) => (value + 1) % pattern.length);
     setLog(message);
@@ -483,7 +483,7 @@ export default function Home() {
 
   if (screen === "town") {
     return (
-      <main className={`town-screen ${blueprint?"reclaimed":"ruined"}`}><audio ref={audioRef} src="/audio/dark-place.ogg" loop preload="metadata"/>
+      <main className={`town-screen ${blueprint?"reclaimed":"ruined"} city-${cityRank.toLowerCase().replaceAll(" ","-")}`}><audio ref={audioRef} src="/audio/dark-place.ogg" loop preload="metadata"/>
         <header className="topbar">
           <div className="brand"><span className="crest">EK</span><div><b>EMBERFALL</b><small>An Elemental Knight Chronicle</small></div></div>
           <div className="resources"><button onClick={()=>setShowCampaign(true)}>Campaign</button><button onClick={()=>setShowDeck(true)}>Deck</button><button onClick={()=>setShowRoster(true)}>Bestiary</button><button onClick={()=>setShowRules(true)}>Rules</button><button onClick={()=>setShowSettings(true)}>Settings</button><span>Blueprints <b>{blueprint ? 1 : 0}</b></span><span>Survivors <b>{rescued ? 1 : 0}</b></span></div>

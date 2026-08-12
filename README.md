@@ -4,12 +4,14 @@ A playable vertical slice for a dark-fantasy deck-building roguelike about rebui
 
 ## Current slice
 
-- Overhead town with the Blacksmith, Elemental Sanctum, and Expedition Hall
+- Walkable overhead town with placeable Blacksmith, Elemental Sanctum, and Expedition Hall
 - Fire, Water, and Lightning attunement; choose two before combat
 - Twelve-card Elemental Knight deck with sword, shield, and elemental techniques
-- Visible enemy intentions, Guard, armor, persistent marks, and three automatic reactions
+- Branching seeded expeditions with fights, elite pairs, camps, merchants, events, and a multi-phase boss
+- Visible enemy intentions, target selection, Guard, armor, Burn, status effects, persistent marks, and three reactions
 - Steam weakens, Conduct chains damage, and Overload delivers burst damage
-- Permanent rescued-NPC and blueprint rewards after victory
+- Permanent townspeople, blueprints, branching card reforges, building tiers, gifts, deeds, and Oath difficulty levels
+- Licensed CC0 music, synthesized combat effects, accessibility controls, tutorial, rulebook, bestiary, and local saves
 - Responsive browser presentation
 
 ## Run locally
