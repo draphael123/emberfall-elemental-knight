@@ -74,9 +74,12 @@ const FOE_INTENTS: Record<string, typeof ENEMY_INTENTS> = {
 const intentionIcon=(intent:{damage:number,name:string})=>intent.damage>=15?"!!":intent.damage?"ATK":"DEF";
 
 const FOES = [
-  { name: "Ash Hound", art: "ash-hound", hp: 34, passive:"Frenzy: Pounce grows by 2 each cycle." }, { name: "Cinder Cultist", art: "cinder-cultist", hp: 40, passive:"Kindled: gains armor before every heavy bolt." },
-  { name: "Gate Reaver", art: "gate-reaver", hp: 48, passive:"Relentless: attacks three turns in succession." }, { name: "Drowned Penitent", art: "drowned-penitent", hp: 52, passive:"Tidewall: alternates armor and crushing blows." },
-  { name: "Storm Imp", art: "storm-imp", hp: 38, passive:"Volatile: short, high-pressure attack cycle." }, { name: "Ironbound Brute", art: "ironbound-brute", hp: 64, passive:"Ironbound: braces before an 18-damage Hammerfall." },
+  { name: "Ash Hound", art: "ash-hound", hp: 34, passive:"Frenzy: Pounce grows by 2 each cycle. Counter with early burst damage." },
+  { name: "Cinder Cultist", art: "cinder-cultist", hp: 40, passive:"Kindled: gains armor before every heavy bolt. Cleanse Burn and Sunder Kindle." },
+  { name: "Gate Reaver", art: "gate-reaver", hp: 48, passive:"Relentless: attacks three turns in succession. Save Guard or Steam for Execution." },
+  { name: "Drowned Penitent", art: "drowned-penitent", hp: 52, passive:"Tidewall: alternates armor and crushing blows. Disrupt armor to outpace Regeneration." },
+  { name: "Storm Imp", art: "storm-imp", hp: 38, passive:"Volatile: Static Claw Charges the next Forked Spark by 4." },
+  { name: "Ironbound Brute", art: "ironbound-brute", hp: 64, passive:"Ironbound: each Brace adds Rage before Hammerfall. Prepare Steam." },
 ];
 const REGION_PROFILE=[
   {name:"Ashen March",mix:"Fire-heavy  mixed Legion",threat:"Burn and relentless attacks"},
@@ -445,9 +448,9 @@ export default function Home() {
       message = `${activeFoe.name} strikes for ${damage}${guard ? ` after ${guard} Guard` : ""}.${enemyBurn?` Burn deals ${enemyBurn}.`:""}`;
       setWeakened(false);
       setVulnerable(v=>Math.max(0,v-1));
-      if(activeFoe.name==="Cinder Cultist")setPlayerBurn(v=>v+2);
-      if(activeFoe.name==="Gate Reaver"&&intent.name==="Execution")setVulnerable(1);
-      if(activeFoe.name==="Storm Imp")setEnemyCharged(intent.name==="Static Claw");
+      if(activeFoe.name==="Cinder Cultist"){setPlayerBurn(v=>v+2);message+=" The bolt applies 2 Burn."}
+      if(activeFoe.name==="Gate Reaver"&&intent.name==="Execution"){setVulnerable(1);message+=" Execution leaves the Knight Vulnerable."}
+      if(activeFoe.name==="Storm Imp"){setEnemyCharged(intent.name==="Static Claw");if(intent.name==="Static Claw")message+=" The Imp Charges its next spark."}
       if(secondFoe&&secondHp>0){const escortDamage=Math.max(0,6-Math.max(0,guard-attack));hurtPlayer(escortDamage,secondFoe.name);message+=` ${secondFoe.name} follows for ${escortDamage}.`}
       if (nextHp <= 0) {
         setScreen("defeat");
@@ -479,7 +482,7 @@ export default function Home() {
     setCombatHistory(v=>[message,...v].slice(0,5));
   }
   function effectiveIntent(){
-    if(!intent?.damage)return intent?.detail||"";const scaled=intent.damage+difficulty+(activeFoe.name==="Ash Hound"?Math.floor((turn-1)/2)*2:0)+(mapStep>=3&&bossPhase===2?3:0)+enemyRage+(enemyCharged?4:0);const attack=Math.max(0,Math.ceil((scaled-(weakened?4:0))*(vulnerable>0?1.5:1)));return `Attacks for ${attack}  ${Math.max(0,attack-guard)} after current Guard`;
+    if(!intent?.damage)return `${guardBroken?"Guard broken: gains only 2 armor. ":""}${intent?.detail||""}`;const scaled=intent.damage+difficulty+(activeFoe.name==="Ash Hound"?Math.floor((turn-1)/2)*2:0)+(mapStep>=3&&bossPhase===2?3:0)+enemyRage+(enemyCharged?4:0);const attack=Math.max(0,Math.ceil((scaled-(weakened?4:0))*(vulnerable>0?1.5:1)));return `Attacks for ${attack}  ${Math.max(0,attack-guard)} after current Guard`;
   }
 
   const deckOverlay = showDeck && <div className="modal-backdrop" onClick={()=>setShowDeck(false)}><section className="deck-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowDeck(false)}>Close</button><p className="eyebrow">KNIGHT&apos;S DECK</p><h2>{(runDeck.length?runDeck:deck).length} cards</h2><div className="deck-list">{(runDeck.length?runDeck:deck).map((card,index)=><article key={`${card.id}-${index}`} className={card.element||"steel"}><b>{card.name}{upgraded.includes(card.id)?" +":""}</b><small>{cardCost(card)} energy  {card.element||"knight"}{upgradePaths[card.id]?`  ${upgradePaths[card.id]} path`:""}</small><p>{card.text}</p></article>)}</div><div className="relic-strip">{relics.length?relics.map(r=><span key={r}> {r}</span>):<span>No relics recovered</span>}</div></section></div>;
