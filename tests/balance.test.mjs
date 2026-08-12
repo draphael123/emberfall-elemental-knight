@@ -35,6 +35,12 @@ test("permanent upgrades have explicit caps and prices",()=>{
 test("advanced difficulty remains bounded",()=>{
   assert.match(source,/difficulty\*\.12/);assert.match(source,/\[0,1,2,3\]/);assert.doesNotMatch(source,/difficulty\*\.[3-9]/);
 });
+test("forge upgrades branch into power and mastery",()=>{
+  assert.match(source,/"power"\|"mastery"/);assert.match(source,/cardBoost/);assert.match(source,/cardCost/);assert.match(source,/minimum 0/i);
+});
+test("displayed run seeds control reward and shuffle order",()=>{
+  assert.match(source,/seededShuffle/);assert.match(source,/hashSeed/);assert.match(source,/runShuffle/);assert.match(source,/reward.*runSeed/i);
+});
 
 test("combat resource limits prevent runaway hands",()=>{
   assert.match(source,/handLimit\]\s*=\s*useState\(8\)/);assert.match(source,/nextHand\.length<handLimit/);assert.match(source,/setEnergy\(3\+\(sanctumLevel>=2\?1:0\)\)/);

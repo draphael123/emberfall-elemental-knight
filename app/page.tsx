@@ -127,9 +127,12 @@ const REWARD_CARDS: Card[] = [
 
 const emptyMarks = (): MarkState => ({ fire: 0, water: 0, lightning: 0 });
 const shuffle = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
-const rewardsFor = (elements:Element[],step:number) => {
+const hashSeed = (value:string) => {let hash=2166136261;for(let i=0;i<value.length;i+=1){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619)}return hash>>>0};
+const seededShuffle = <T,>(items:T[],seed:string) => {let state=hashSeed(seed)||1;const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296};const copy=[...items];for(let i=copy.length-1;i>0;i-=1){const j=Math.floor(random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
+const rewardsFor = (elements:Element[],step:number,seed="") => {
   const eligible=REWARD_CARDS.filter(card=>!card.element||elements.includes(card.element));
-  return [0,1,2].map(offset=>eligible[(step*2+offset)%eligible.length]);
+  const ordered=seed?seededShuffle(eligible,`${seed}:reward:${step}`):eligible;
+  return ordered.slice(0,3);
 };
 
 export default function Home() {
@@ -223,10 +226,13 @@ export default function Home() {
   const [movingBuilding, setMovingBuilding] = useState<"forge"|"sanctum"|"hall"|null>(null);
   const [difficulty, setDifficulty] = useState(0);
   const [runSeed, setRunSeed] = useState("");
+  const [shuffleCount, setShuffleCount] = useState(0);
   const [showDefeatHelp, setShowDefeatHelp] = useState(false);
   const [campaignWins, setCampaignWins] = useState(0);
   const [achievements, setAchievements] = useState<string[]>([]);
   const [wandererRescued, setWandererRescued] = useState(false);
+  const [ilyraGift, setIlyraGift] = useState(false);
+  const [quartermasterGift, setQuartermasterGift] = useState(false);
   const [runStats, setRunStats] = useState({cardsPlayed:0,reactions:0,damageTaken:0,elites:0});
   const [bossPhase, setBossPhase] = useState(1);
   const [firstAttack, setFirstAttack] = useState(true);
@@ -234,14 +240,16 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const maxHp = 58 + forgeLevel * 3;
   const activeFoe = mapStep >= 3 ? { name: "Legion Warden", art: "legion-warden", hp: 72, passive:"Siegeborn: cycles armor, cleaves, and a devastating rush." } : FOES[foeIndex];
-  const foeMaxHp = elite ? Math.ceil(activeFoe.hp * 1.28) : activeFoe.hp;
+  const foeMaxHp = Math.ceil((elite ? activeFoe.hp * 1.28 : activeFoe.hp)*(1+difficulty*.12));
+  const cityScore = forgeLevel + sanctumLevel + hallLevel + (rescued?1:0) + (wandererRescued?1:0);
+  const cityRank = cityScore>=11?"Fortified City":cityScore>=8?"Rising Stronghold":cityScore>=5?"Reclaimed Ward":"Last Refuge";
 
   const deck = useMemo(
     () => [...BASE_CARDS, ...ELEMENT_CARDS[selected[0]], ...ELEMENT_CARDS[selected[1]]],
     [selected],
   );
-  useEffect(()=>{const saved=localStorage.getItem("emberfall-save");if(saved){try{const data=JSON.parse(saved);setRescued(!!data.rescued);setBlueprint(!!data.blueprint);setForgeLevel(data.forgeLevel||0);setGold(data.gold??45);setSupplies(data.supplies||0);setUpgraded(data.upgraded||[]);setUpgradePaths(data.upgradePaths||{});setMaraGift(!!data.maraGift);setSanctumLevel(data.sanctumLevel||1);setSanctumBlessing(data.sanctumBlessing||"fire");setHallLevel(data.hallLevel||1);setDifficulty(data.difficulty||0);setCampaignWins(data.campaignWins||0);setAchievements(data.achievements||[]);setTownDay(data.townDay||1);setWandererRescued(!!data.wandererRescued);if(data.buildingPos)setBuildingPos(data.buildingPos)}catch{setTownMessage("The old campaign record was damaged; a fresh ledger has been opened.")}}},[]);
-  useEffect(()=>{try{localStorage.setItem("emberfall-save",JSON.stringify({rescued,blueprint,forgeLevel,gold,supplies,upgraded,upgradePaths,maraGift,sanctumLevel,sanctumBlessing,hallLevel,buildingPos,difficulty,campaignWins,wandererRescued,townDay,achievements}));setSaveStatus("Campaign saved locally")}catch{setSaveStatus("Local save unavailable")}},[rescued,blueprint,forgeLevel,gold,supplies,upgraded,upgradePaths,maraGift,sanctumLevel,sanctumBlessing,hallLevel,buildingPos,difficulty,campaignWins,wandererRescued,townDay,achievements]);
+  useEffect(()=>{const saved=localStorage.getItem("emberfall-save");if(saved){try{const data=JSON.parse(saved);setRescued(!!data.rescued);setBlueprint(!!data.blueprint);setForgeLevel(data.forgeLevel||0);setGold(data.gold??45);setSupplies(data.supplies||0);setUpgraded(data.upgraded||[]);setUpgradePaths(data.upgradePaths||{});setMaraGift(!!data.maraGift);setIlyraGift(!!data.ilyraGift);setQuartermasterGift(!!data.quartermasterGift);setSanctumLevel(data.sanctumLevel||1);setSanctumBlessing(data.sanctumBlessing||"fire");setHallLevel(data.hallLevel||1);setDifficulty(data.difficulty||0);setCampaignWins(data.campaignWins||0);setAchievements(data.achievements||[]);setTownDay(data.townDay||1);setWandererRescued(!!data.wandererRescued);if(data.buildingPos)setBuildingPos(data.buildingPos)}catch{setTownMessage("The old campaign record was damaged; a fresh ledger has been opened.")}}},[]);
+  useEffect(()=>{try{localStorage.setItem("emberfall-save",JSON.stringify({rescued,blueprint,forgeLevel,gold,supplies,upgraded,upgradePaths,maraGift,ilyraGift,quartermasterGift,sanctumLevel,sanctumBlessing,hallLevel,buildingPos,difficulty,campaignWins,wandererRescued,townDay,achievements}));setSaveStatus("Campaign saved locally")}catch{setSaveStatus("Local save unavailable")}},[rescued,blueprint,forgeLevel,gold,supplies,upgraded,upgradePaths,maraGift,ilyraGift,quartermasterGift,sanctumLevel,sanctumBlessing,hallLevel,buildingPos,difficulty,campaignWins,wandererRescued,townDay,achievements]);
   useEffect(()=>{const prefs=localStorage.getItem("emberfall-settings");if(prefs){try{const p=JSON.parse(prefs);setMusicVolume(p.musicVolume??35);setEffectsVolume(p.effectsVolume??70);setAmbienceVolume(p.ambienceVolume??25);setScreenShake(p.screenShake??true);setReducedMotion(!!p.reducedMotion);setLargeText(!!p.largeText);setHighContrast(!!p.highContrast)}catch{localStorage.removeItem("emberfall-settings")}}},[]);
   useEffect(()=>{localStorage.setItem("emberfall-settings",JSON.stringify({musicVolume,effectsVolume,ambienceVolume,screenShake,reducedMotion,largeText,highContrast}));if(audioRef.current)audioRef.current.volume=(musicVolume/100)*(ambienceVolume/100+.5);document.body.classList.toggle("large-text",largeText);document.body.classList.toggle("high-contrast",highContrast);document.body.classList.toggle("reduce-motion",reducedMotion)},[musicVolume,effectsVolume,ambienceVolume,screenShake,reducedMotion,largeText,highContrast]);
   useEffect(()=>{function keys(event:KeyboardEvent){if(screen==="combat"&&!showTutorial){if(event.key==="Escape")setPaused(v=>!v);if(event.key.toLowerCase()==="e"&&!paused)endTurn();const number=Number(event.key);if(number>=1&&number<=hand.length&&!paused)playCard(hand[number-1])}}window.addEventListener("keydown",keys);return()=>window.removeEventListener("keydown",keys)});
@@ -266,14 +274,15 @@ export default function Home() {
   }
   function cardCost(card:Card){return Math.max(0,card.cost-(upgradePaths[card.id]==="mastery"?1:0))}
   function cardBoost(card:Card){return upgradePaths[card.id]==="power"?3:0}
+  function runShuffle<T>(items:T[],label:string){const next=shuffleCount+1;setShuffleCount(next);return runSeed?seededShuffle(items,`${runSeed}:${label}:${next}`):shuffle(items)}
 
   function startCombat(index = 0, dangerous = false) {
-    const target = mapStep >= 3 ? { name: "Legion Warden", hp: 72 } : FOES[index];
+    const target = mapStep >= 3 ? { name: "Legion Warden", hp: 72, passive:"Siegeborn: cycles armor, cleaves, and a devastating rush." } : FOES[index];
     setFoeIndex(index);
     setRouteHistory(v=>[...v,`${dangerous?"Elite":"Combat"}: ${target.name}`]);
     const expeditionDeck = runDeck.length ? runDeck : deck;
     if(!runDeck.length)setRunDeck(deck);
-    const pile = shuffle(expeditionDeck);
+    const pile = runShuffle(expeditionDeck,`battle-${mapStep}-${index}`);
     setHand(pile.slice(0, 5));
     setDrawPile(pile.slice(5));
     setDiscard([]);
@@ -283,7 +292,7 @@ export default function Home() {
     setElite(dangerous);
     setEnemyHp(Math.ceil((dangerous ? target.hp * 1.28 : target.hp)*(1+difficulty*.12)));
     setEnemyArmor(0);
-    setEnemyThorns(activeFoe.name==="Cinder Cultist"?2:0);
+    setEnemyThorns(target.name==="Cinder Cultist"?2:0);
     setEnemyPhaseLabel("");
     setGuard(relics.includes("Bastion Sigil")?5:0);
     setEnergy(3+(sanctumLevel>=2?1:0));
@@ -307,13 +316,13 @@ export default function Home() {
     if(!localStorage.getItem("emberfall-tutorial-seen")){setShowTutorial(true);localStorage.setItem("emberfall-tutorial-seen","yes")}
     setScreen("combat");
   }
-  function beginExpedition(){setRunGoldStart(gold);setTownDay(v=>v+1);setMapStep(0);setEncountersCleared(0);setRouteHistory([]);setRunDeck([]);setRunSeed(Math.random().toString(36).slice(2,8).toUpperCase());setScreen("attune")}
+  function beginExpedition(){setRunGoldStart(gold);setTownDay(v=>v+1);setMapStep(0);setEncountersCleared(0);setRouteHistory([]);setRunDeck([]);setShuffleCount(0);setRunSeed(Math.random().toString(36).slice(2,8).toUpperCase());setScreen("attune")}
   function spendSupply(){if(supplies<=0||playerHp>=maxHp)return;setSupplies(v=>v-1);setPlayerHp(v=>Math.min(maxHp,v+8));setTownMessage("A field ration restores 8 health before departure.")}
   function retreat(){setGold(0);setSupplies(0);setRunDeck([]);setRelics([]);setRouteHistory([]);setTownMessage("The Knight returns without ordinary spoils. Blueprints and rescued people remain.");setScreen("town")}
-  function openNode(type:"camp"|"merchant"|"event") {setNodeType(type);if(type==="merchant")setMerchantStock(shuffle(REWARD_CARDS.filter(card=>!card.element||selected.includes(card.element))).slice(0,3));}
+  function openNode(type:"camp"|"merchant"|"event") {setNodeType(type);if(type==="merchant")setMerchantStock(runShuffle(REWARD_CARDS.filter(card=>!card.element||selected.includes(card.element)),`merchant-${mapStep}`).slice(0,3));}
   function finishNode(){if(nodeType)setRouteHistory(v=>[...v,nodeType[0].toUpperCase()+nodeType.slice(1)]);setMapStep(v=>v+1);setNodeType(null)}
   function removeCard(card?:Card){const current=runDeck.length?runDeck:deck;if(current.length<=8||gold<25)return;const chosen=card||current[current.length-1];const index=current.findIndex(item=>item.id===chosen.id);if(index<0)return;setRunDeck(current.filter((_,i)=>i!==index));setGold(v=>v-25);setTownMessage(`The peddler burns ${chosen.name} from the expedition deck.`)}
-  function claimReward(card?:Card){if(card)setRunDeck(v=>[...(v.length?v:deck),card]);setGold(v=>v+(elite?20:10));setSupplies(v=>v+(elite?2:1));setEncountersCleared(v=>v+1);if(elite){setRelicChoice(shuffle(RELICS.filter(r=>!relics.includes(r.name))).slice(0,2));return}setMapStep(v=>v+1);setScreen("map")}
+  function claimReward(card?:Card){if(card)setRunDeck(v=>[...(v.length?v:deck),card]);setGold(v=>v+(elite?20:10));setSupplies(v=>v+(elite?2:1));setEncountersCleared(v=>v+1);if(elite){setRelicChoice(runShuffle(RELICS.filter(r=>!relics.includes(r.name)),`relic-${mapStep}`).slice(0,2));return}setMapStep(v=>v+1);setScreen("map")}
   function rewardComparison(card:Card){const current=runDeck.length?runDeck:deck;const same=current.filter(c=>c.element===card.element);const average=same.length?Math.round(same.reduce((sum,c)=>sum+(c.damage||c.block||0),0)/same.length):0;const value=card.damage||card.block||0;return value>average?"Above deck average":value===average?"Matches deck average":"Utility or setup pick"}
   function chooseRelic(name:string){setRelics(v=>[...v,name]);setRelicChoice(null);setMapStep(v=>v+1);setScreen("map")}
   function reforge(card:Card,path:"power"|"mastery"){if(gold<25||upgraded.includes(card.id))return;setGold(v=>v-25);setUpgraded(v=>[...v,card.id]);setUpgradePaths(v=>({...v,[card.id]:path}));setForgeLevel(v=>Math.min(3,v+1));setForgeTarget(null);setTownMessage(`${card.name} follows the ${path==="power"?"Power path: +3 damage or Guard":"Mastery path: costs 1 less energy"}.`)}
@@ -324,7 +333,7 @@ export default function Home() {
     const nextHand = [...currentHand];
     for (let i = 0; i < count; i += 1) {
       if (!pile.length && spent.length) {
-        pile = shuffle(spent);
+        pile = runShuffle(spent,`reshuffle-${turn}`);
         spent = [];
       }
       const card = pile.shift();
@@ -441,7 +450,7 @@ export default function Home() {
     const retained=hand.filter(card=>card.retain);const spent = [...discard, ...hand.filter(card=>!card.retain)];
     let pile = [...drawPile];
     if (pile.length < 5) {
-      pile = [...pile, ...shuffle(spent)];
+      pile = [...pile, ...runShuffle(spent,`end-turn-${turn}`)];
       setDiscard([]);
     } else {
       setDiscard(spent);
@@ -472,14 +481,14 @@ export default function Home() {
           <div className="resources"><button onClick={()=>setShowCampaign(true)}>Campaign</button><button onClick={()=>setShowDeck(true)}>Deck</button><button onClick={()=>setShowRoster(true)}>Bestiary</button><button onClick={()=>setShowRules(true)}>Rules</button><button onClick={()=>setShowSettings(true)}>Settings</button><span>Blueprints <b>{blueprint ? 1 : 0}</b></span><span>Survivors <b>{rescued ? 1 : 0}</b></span></div>
         </header>
         <section className="town-intro">
-          <p className="eyebrow">THE LAST QUIET GROUND  DAY {townDay}</p>
+          <p className="eyebrow">{cityRank.toUpperCase()}  DAY {townDay}</p>
           <h1>Reclaim what the demons left behind.</h1>
           <p>Raise a fortress from ash. Every rescued soul changes what the Knight can carry beyond the gate.</p>
         </section>
         {buildToast&&<div className="build-toast" role="status">{buildToast}</div>}<section className={`town-grid ${townEdit?"edit-mode":""}`} aria-label="Walkable overhead town" onClick={(event)=>{const rect=event.currentTarget.getBoundingClientRect();const pos={x:Math.max(2,Math.min(78,((event.clientX-rect.left)/rect.width)*100)),y:Math.max(3,Math.min(72,((event.clientY-rect.top)/rect.height)*100))};if(townEdit&&movingBuilding){setBuildingPos(v=>({...v,[movingBuilding]:pos}));setMovingBuilding(null);setTownMessage("Building placed. The new street plan is saved.");setBuildToast("City plan saved");window.setTimeout(()=>setBuildToast(""),1600)}else{setTownPos(pos);setTownMessage("Boots ring across the wet stones.")}}}>
           <div className="grid-lines" />
           <div className="town-knight" style={{left:`${townPos.x}%`,top:`${townPos.y}%`}}><img src="/art/elemental-knight.webp" alt="Elemental Knight walking through town"/></div>
-          <button className="ambient-npc npc-one" onClick={e=>{e.stopPropagation();setTownMessage(TOWN_LINES[0])}}><i/>Quartermaster</button>{wandererRescued&&<button className="town-npc scout-npc" onClick={e=>{e.stopPropagation();setTownMessage("Ilyra: The western reeds hide roads the Legion does not watch.")}}>Ilyra  Scout</button>}<button className="ambient-npc npc-two" onClick={e=>{e.stopPropagation();setTownMessage(TOWN_LINES[2])}}><i/>Refugee</button><button className="ambient-npc npc-three" onClick={e=>{e.stopPropagation();setTownMessage(TOWN_LINES[1])}}><i/>Watchman</button>
+          <button className="ambient-npc npc-one" onClick={e=>{e.stopPropagation();if(blueprint&&!quartermasterGift){setQuartermasterGift(true);setSupplies(v=>v+2);setTownMessage("Quartermaster Orin: The walls stand again. Take two field rations for the next road.")}else setTownMessage(TOWN_LINES[0])}}><i/>Quartermaster {blueprint&&!quartermasterGift&&<b className="gift-mark">!</b>}</button>{wandererRescued&&<button className="town-npc scout-npc" onClick={e=>{e.stopPropagation();if(!ilyraGift){setIlyraGift(true);setGold(v=>v+15);setTownMessage("Ilyra: I found Legion crowns in the reeds. Use the 15 gold before they return.")}else setTownMessage("Ilyra: The western reeds hide roads the Legion does not watch.")}}>Ilyra  Scout {!ilyraGift&&<i className="gift-mark">!</i>}</button>}<button className="ambient-npc npc-two" onClick={e=>{e.stopPropagation();setTownMessage(TOWN_LINES[2])}}><i/>Refugee</button><button className="ambient-npc npc-three" onClick={e=>{e.stopPropagation();setTownMessage(TOWN_LINES[1])}}><i/>Watchman</button>
           {rescued && <button className="town-npc" onClick={(event)=>{event.stopPropagation();if(!maraGift){setMaraGift(true);setGold(v=>v+20);setTownMessage("Mara: You came back for us. Take these 20 crowns; the dead have no use for them.")}else setTownMessage("Mara: Every tempered edge is another stone in Emberfall&apos;s wall.")}}>Mara {!maraGift&&<i className="gift-mark">!</i>}</button>}
           <button style={{left:`${buildingPos.forge.x}%`,top:`${buildingPos.forge.y}%`}} className={`building forge tier-${forgeLevel} ${movingBuilding==="forge"?"moving":""}`} onClick={(e)=>{e.stopPropagation();if(townEdit){setMovingBuilding("forge");return}setTownPos({x:22,y:30});if(rescued)setForgeOpen(true);else setTownMessage("The forge is cold. Its keeper is missing.")}}><span className="roof"></span><b>Blacksmith  {forgeLevel}</b><small>{townEdit?"Select, then place":rescued ? "Reforge a card  25 gold" : "Ruined  survivor missing"}</small></button>
           <button style={{left:`${buildingPos.sanctum.x}%`,top:`${buildingPos.sanctum.y}%`}} className={`building sanctum tier-${sanctumLevel} ${movingBuilding==="sanctum"?"moving":""}`} onClick={(e)=>{e.stopPropagation();if(townEdit){setMovingBuilding("sanctum");return}setTownPos({x:55,y:28});if(blueprint&&sanctumLevel<3&&gold>=35){setGold(v=>v-35);setSanctumLevel(v=>v+1);setBuildToast("Sanctum upgraded");window.setTimeout(()=>setBuildToast(""),1600);setTownMessage("The Sanctum rises. Expeditions begin with stronger elemental reserves.")}else{setTownMessage("The Sanctum opens the elemental attunement chamber.");window.setTimeout(()=>setScreen("attune"),450)}}}><span className="roof"></span><b>Elemental Sanctum  {sanctumLevel}</b><small>{townEdit?"Select, then place":blueprint&&sanctumLevel<3?"Upgrade  35 gold":"Choose starting vows"}</small></button>
@@ -516,7 +525,7 @@ export default function Home() {
 
   if(screen==="map") return <main className="expedition-screen"><header className="combat-top"><button onClick={()=>setConfirmRetreat(true)}>Retreat</button><div><span>THE ASHEN MARCH</span><b>Choose a road  Deck {runDeck.length||12}  Seed {runSeed||"UNSET"}</b></div><div className="turn">CLEARED <b>{encountersCleared}</b>  HP <b>{playerHp}</b></div></header><section className="expedition-copy"><p className="eyebrow">BRANCHING EXPEDITION</p><h1>{mapStep>=3?"The fortress gate":"The road divides in the rain."}</h1><p>{mapStep>=3?"A colossal shadow moves behind the portcullis.":"Enemy concentrations shift with every route. Choose what your deck can answer."}</p></section><section className="route-choices">{mapStep>=3?<button className="encounter boss-encounter" onClick={()=>startCombat(0)}><img src="/art/legion-warden.webp" alt="Legion Warden"/><span>Boss</span><b>Legion Warden</b><small>Blueprint  rescued survivor</small></button>:<>{[mapStep%6,(mapStep+2)%6].map((index,branch)=><button key={index} className={`encounter ${branch?"elite-route":""}`} onClick={()=>startCombat(index,!!branch)}><img src={`/art/${FOES[index].art}.webp`} alt={FOES[index].name}/><span>{branch?"Dangerous route":"Combat"}</span><b>{FOES[index].name}</b><small>{branch?(hallLevel>=2?`Elite pair  ${FOES[(index+1)%FOES.length].name}  20 gold + relic`:"Elite pair  more gold"):(hallLevel>=2?`${FOES[index].passive}  10 gold`:"Card reward")}</small></button>)}<button className="encounter utility-route" onClick={()=>openNode(mapStep%3===0?"camp":mapStep%3===1?"merchant":"event")}><span>Utility</span><b>{mapStep%3===0?"Camp":mapStep%3===1?"Merchant":"Lost Survivor"}</b><small>Recover  trade  choose</small></button></>}</section><div className="route-progress">{[0,1,2,3].map(i=><i key={i} className={i<=mapStep?"reached":i===3?"boss-point":""}/>)}</div>{routeHistory.length>0&&<div className="route-history">{routeHistory.map((entry,index)=><span key={`${entry}-${index}`}>{entry}</span>)}</div>}{nodeType&&<div className="modal-backdrop"><section className="node-modal"><button className="modal-close" onClick={()=>setNodeType(null)}>Leave</button><p className="eyebrow">{nodeType}</p><h2>{nodeType==="camp"?"A fire beneath broken stone":nodeType==="merchant"?"The Lantern Peddler":"Someone calls from the reeds"}</h2>{nodeType==="camp"&&<div className="node-actions"><button onClick={()=>{setPlayerHp(v=>Math.min(maxHp,v+18));finishNode()}}><b>Rest</b><small>Recover 18 health</small></button><button onClick={()=>{const target=(runDeck.length?runDeck:deck).find(c=>!upgraded.includes(c.id));if(target)setUpgraded(v=>[...v,target.id]);finishNode()}}><b>Train</b><small>Upgrade one card</small></button></div>}{nodeType==="merchant"&&<><p>Buy a technique, remove a card, or leave without spending.</p><div className="merchant-stock">{merchantStock.map(card=><button key={card.id} disabled={gold<20} onClick={()=>{setGold(v=>v-20);setRunDeck(v=>[...(v.length?v:deck),card]);finishNode()}}><b>{card.name}</b><small>{card.text}</small><em>20 gold</em></button>)}</div><button className="quiet-button" disabled={gold<25||(runDeck.length?runDeck:deck).length<=8} onClick={()=>{removeCard();finishNode()}}>Remove last card  25 gold</button></>}{nodeType==="event"&&<div className="node-actions"><button onClick={()=>{setGold(v=>v+20);setWandererRescued(true);finishNode()}}><b>Rescue the wanderer</b><small>Gain 20 gold and a future ally</small></button><button onClick={()=>{setPlayerHp(v=>Math.min(maxHp,v+10));setRelics(v=>v.includes("Pilgrim Bell")?v:[...v,"Pilgrim Bell"]);finishNode()}}><b>Follow their warning</b><small>Heal 10 and gain Pilgrim Bell</small></button></div>}</section></div>}{confirmRetreat&&<div className="modal-backdrop"><section className="pause-modal"><p className="eyebrow">RETREAT</p><h2>Leave ordinary spoils behind?</h2><p>Gold, supplies, run cards, and relics will be lost. Survivors, blueprints, buildings, and reforges remain.</p><button className="primary" onClick={retreat}>Confirm retreat</button><button className="quiet-button" onClick={()=>setConfirmRetreat(false)}>Continue expedition</button></section></div>}</main>;
 
-  if(screen==="reward") return <main className="reward-screen"><p className="eyebrow">{elite?"ELITE VANQUISHED":"ROAD CLEARED"}</p><h1>{relicChoice?"Choose a relic.":"Add one card to your deck."}</h1>{relicChoice?<div className="relic-choices">{relicChoice.map(relic=><button key={relic.name} onClick={()=>chooseRelic(relic.name)}><b>{relic.name}</b><span>{relic.text}</span></button>)}</div>:<><p>Current deck: {runDeck.length||12} cards  Health persists: {playerHp}</p><div className="reward-cards">{rewardsFor(selected,mapStep).map(card=><button key={card.id} onClick={()=>claimReward(card)}><b>{card.name}</b><span>{card.text}</span><small>{card.rarity||"common"}  {rewardComparison(card)}  +{elite?20:10} gold</small></button>)}</div><button className="reward-skip" onClick={()=>claimReward()}>Skip card  keep deck lean</button></>}</main>;
+  if(screen==="reward") return <main className="reward-screen"><p className="eyebrow">{elite?"ELITE VANQUISHED":"ROAD CLEARED"}</p><h1>{relicChoice?"Choose a relic.":"Add one card to your deck."}</h1>{relicChoice?<div className="relic-choices">{relicChoice.map(relic=><button key={relic.name} onClick={()=>chooseRelic(relic.name)}><b>{relic.name}</b><span>{relic.text}</span></button>)}</div>:<><p>Current deck: {runDeck.length||12} cards  Health persists: {playerHp}</p><div className="reward-cards">{rewardsFor(selected,mapStep,runSeed).map(card=><button key={card.id} onClick={()=>claimReward(card)}><b>{card.name}</b><span>{card.text}</span><small>{card.rarity||"common"}  {rewardComparison(card)}  +{elite?20:10} gold</small></button>)}</div><button className="reward-skip" onClick={()=>claimReward()}>Skip card  keep deck lean</button></>}</main>;
   if (screen === "victory" || screen === "defeat") {
     const won = screen === "victory";
     return <main className={`result-screen ${won ? "won" : "lost"}`}><div className="result-sigil">{won ? "VICTORY" : "DEFEAT"}</div><p className="eyebrow">{won ? "FORTRESS RECLAIMED" : "EXPEDITION ENDED"}</p><h1>{won ? "The gate belongs to the living." : "The ash keeps its secrets."}</h1><p>{won ? "Mara the Smith steps from the cells carrying the Forge Foundation blueprint. Both are permanently secured." : "Ordinary spoils are lost, but rescued townspeople and blueprints remain."}</p><div className="run-summary"><span><b>{runStats.cardsPlayed}</b>Cards played</span><span><b>{runStats.reactions}</b>Reactions</span><span><b>{runStats.damageTaken}</b>Damage taken</span><span><b>{runStats.elites}</b>Elite roads</span><span><b>{Math.max(0,gold-runGoldStart)}</b>Gold gained</span></div><div className="rewards">{won ? <><span>Mara rescued</span><span>Forge blueprint</span><span>Oath {Math.min(3,campaignWins+1)} unlocked</span></> : <span>Try a different pairing</span>}</div>{!won&&<><button className="quiet-button" onClick={()=>setShowDefeatHelp(v=>!v)}>Why did this run fail?</button>{showDefeatHelp&&<div className="defeat-help"><b>Field assessment</b><p>{runStats.damageTaken>35?"You took heavy damage. Prioritize Guard, Steam, and camp recovery.":runStats.reactions<4?"Your deck triggered few reactions. Alternate elemental cards to convert marks.":runStats.elites>1?"Multiple elite roads exhausted the Knight. Mix safer fights into the route.":"A leaner deck or a different vow pairing may improve draw consistency."}</p></div>}</>}<button className="primary" onClick={() => setScreen("town")}>Return to Emberfall</button></main>;
