@@ -264,12 +264,12 @@ export default function Home() {
       <section className="battlefield">
         <div className="combatant knight">
           <div className="status"><b>Elemental Knight</b><span>{playerHp}/58</span><div className="health"><i style={{ width: `${(playerHp / 58) * 100}%` }} /></div>{guard > 0 && <small>◆ {guard} Guard</small>}</div>
-          <div className="character-art knight-art"><img src="/art/elemental-knight.png" alt="The Elemental Knight in blackened plate with sword and shield" /></div>
+          <div className="character-art knight-art"><img src="/art/elemental-knight.webp" alt="The Elemental Knight in blackened plate with sword and shield" /></div>
         </div>
         <div className="combat-center"><p>{log}</p><div className="chain-line" /></div>
         <div className="combatant demon">
           <div className="intent-card"><small>NEXT INTENT</small><b>{intent.name}</b><span>{intent.detail}{weakened && intent.damage ? " · weakened" : ""}</span></div>
-          <div className="character-art demon-art"><img src="/art/legion-warden.png" alt="The horned Legion Warden in furnace-lit fortress armor" /></div>
+          <div className="character-art demon-art"><img src="/art/legion-warden.webp" alt="The horned Legion Warden in furnace-lit fortress armor" /></div>
           <div className="status"><b>Legion Warden</b><span>{enemyHp}/72</span><div className="health enemy"><i style={{ width: `${(enemyHp / 72) * 100}%` }} /></div>{enemyArmor > 0 && <small>⬟ {enemyArmor} Armor</small>}</div>
           <div className="marks">{ELEMENTS.map((element) => marks[element.id] > 0 && <span key={element.id} className={element.id}>{element.sigil} {marks[element.id]}</span>)}</div>
         </div>
