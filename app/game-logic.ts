@@ -136,3 +136,11 @@ export function effectiveCardCost(baseCost: number, mastery: boolean) {
 export function powerBoost(value: number, power: boolean) {
   return value + (power && value > 0 ? 3 : 0);
 }
+
+export function retreatResources(startGold: number, startSupplies: number) {
+  return { gold: Math.max(0, startGold), supplies: Math.max(0, startSupplies), relics: [] as string[] };
+}
+
+export function earnedResources(elite: boolean) {
+  return elite ? { gold: 20, supplies: 2 } : { gold: 10, supplies: 1 };
+}

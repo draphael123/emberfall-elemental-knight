@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canAfford, cityRank, deckCurve, effectiveCardCost, eligibleRewards, expeditionGrade, handDrawCount, hashSeed, incomingAttack, parseCampaignSave, powerBoost, reactionResult, relicChoices, removeAt, repairCampaignSave, restorationObjectives, rewardBand, scaledEnemyHp, seededShuffle, spend } from "../app/game-logic.ts";
+import { canAfford, cityRank, deckCurve, earnedResources, effectiveCardCost, eligibleRewards, expeditionGrade, handDrawCount, hashSeed, incomingAttack, parseCampaignSave, powerBoost, reactionResult, relicChoices, removeAt, repairCampaignSave, restorationObjectives, retreatResources, rewardBand, scaledEnemyHp, seededShuffle, spend } from "../app/game-logic.ts";
 
 test("seeded shuffles are reproducible and seed-sensitive",()=>{
   const cards=["a","b","c","d","e","f"];
@@ -101,4 +101,9 @@ test("deck curve and retained-card draws remain bounded",()=>{
 test("branching upgrades cannot create negative costs",()=>{
   assert.equal(effectiveCardCost(2,true),1);assert.equal(effectiveCardCost(0,true),0);assert.equal(effectiveCardCost(1,false),1);
   assert.equal(powerBoost(7,true),10);assert.equal(powerBoost(0,true),0);assert.equal(powerBoost(7,false),7);
+});
+
+test("expedition economy distinguishes earned and banked resources",()=>{
+  assert.deepEqual(earnedResources(false),{gold:10,supplies:1});assert.deepEqual(earnedResources(true),{gold:20,supplies:2});
+  assert.deepEqual(retreatResources(45,3),{gold:45,supplies:3,relics:[]});assert.deepEqual(retreatResources(-2,-1),{gold:0,supplies:0,relics:[]});
 });
