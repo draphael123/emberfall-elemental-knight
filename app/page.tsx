@@ -68,7 +68,7 @@ const emptyMarks = (): MarkState => ({ fire: 0, water: 0, lightning: 0 });
 const shuffle = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
 
 export default function Home() {
-  const [screen, setScreen] = useState<"town" | "attune" | "map" | "combat" | "reward" | "victory" | "defeat">("town");
+  const [screen, setScreen] = useState<"intro" | "town" | "attune" | "map" | "combat" | "reward" | "victory" | "defeat">("intro");
   const [selected, setSelected] = useState<Element[]>(["fire", "water"]);
   const [playerHp, setPlayerHp] = useState(58);
   const [guard, setGuard] = useState(0);
@@ -230,6 +230,8 @@ export default function Home() {
     setLog(message);
   }
 
+  if(screen==="intro") return <main className="intro-screen"><div className="intro-copy"><span className="crest intro-crest">EK</span><p className="eyebrow">AN ELEMENTAL KNIGHT CHRONICLE</p><h1>EMBERFALL</h1><p>Six vows. One fallen city. The road begins at the last unbroken gate.</p><button className="primary" onClick={()=>setScreen("town")}>Begin reclamation <span>→</span></button><small>Mouse recommended · Browser prototype</small></div></main>;
+
   if (screen === "town") {
     return (
       <main className="town-screen">
@@ -245,6 +247,7 @@ export default function Home() {
         <section className="town-grid" aria-label="Walkable overhead town" onClick={(event)=>{const rect=event.currentTarget.getBoundingClientRect();setTownPos({x:((event.clientX-rect.left)/rect.width)*100,y:((event.clientY-rect.top)/rect.height)*100});setTownMessage("Boots ring across the wet stones.")}}>
           <div className="grid-lines" />
           <div className="town-knight" style={{left:`${townPos.x}%`,top:`${townPos.y}%`}}><img src="/art/elemental-knight.webp" alt="Elemental Knight walking through town"/></div>
+          <div className="ambient-npc npc-one"><i/>Quartermaster</div><div className="ambient-npc npc-two"><i/>Refugee</div><div className="ambient-npc npc-three"><i/>Watchman</div>
           {rescued && <button className="town-npc" onClick={(event)=>{event.stopPropagation();setTownMessage("Mara: Bring me a blueprint and I will make it sing.")}}>Mara</button>}
           <button className="building forge"><span className="roof">⚒</span><b>Blacksmith</b><small>{rescued ? "Mara has returned" : "Ruined · survivor missing"}</small></button>
           <button className="building sanctum"><span className="roof">✦</span><b>Elemental Sanctum</b><small>Attunement available</small></button>
