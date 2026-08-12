@@ -3,6 +3,7 @@ import {readFile} from "node:fs/promises";
 import test from "node:test";
 
 const source=await readFile(new URL("../app/page.tsx",import.meta.url),"utf8");
+const logic=await readFile(new URL("../app/game-logic.ts",import.meta.url),"utf8");
 
 test("starting decks stay compact and playable",()=>{
   const base=[...source.matchAll(/id: "(?:iron-cut|shield-set|riposte|battle-focus)/g)].length;
@@ -36,13 +37,13 @@ test("permanent upgrades have explicit caps and prices",()=>{
 });
 
 test("advanced difficulty remains bounded",()=>{
-  assert.match(source,/difficulty\*\.12/);assert.match(source,/\[0,1,2,3\]/);assert.doesNotMatch(source,/difficulty\*\.[3-9]/);
+  assert.match(logic,/difficulty \* 0\.12/);assert.match(source,/\[0,1,2,3\]/);assert.doesNotMatch(logic,/difficulty \* 0\.[3-9]/);
 });
 test("forge upgrades branch into power and mastery",()=>{
   assert.match(source,/"power"\|"mastery"/);assert.match(source,/cardBoost/);assert.match(source,/cardCost/);assert.match(source,/minimum 0/i);
 });
 test("displayed run seeds control reward and shuffle order",()=>{
-  assert.match(source,/seededShuffle/);assert.match(source,/hashSeed/);assert.match(source,/runShuffle/);assert.match(source,/reward.*runSeed/i);
+  assert.match(source,/seededShuffle/);assert.match(logic,/hashSeed/);assert.match(source,/runShuffle/);assert.match(source,/reward.*runSeed/i);
 });
 
 test("combat resource limits prevent runaway hands",()=>{

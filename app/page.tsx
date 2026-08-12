@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/set-state-in-effect, jsx-a11y/media-has-caption, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-element-interactions, @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cityRank as getCityRank, incomingAttack, scaledEnemyHp, seededShuffle } from "./game-logic";
 
 type Element = "fire" | "water" | "lightning";
 type MarkState = Record<Element, number>;
@@ -136,8 +137,6 @@ const REWARD_CARDS: Card[] = [
 
 const emptyMarks = (): MarkState => ({ fire: 0, water: 0, lightning: 0 });
 const shuffle = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
-const hashSeed = (value:string) => {let hash=2166136261;for(let i=0;i<value.length;i+=1){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619)}return hash>>>0};
-const seededShuffle = <T,>(items:T[],seed:string) => {let state=hashSeed(seed)||1;const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296};const copy=[...items];for(let i=copy.length-1;i>0;i-=1){const j=Math.floor(random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const rewardsFor = (elements:Element[],step:number,seed="") => {
   const eligible=REWARD_CARDS.filter(card=>!card.element||elements.includes(card.element));
   const ordered=seed?seededShuffle(eligible,`${seed}:reward:${step}`):eligible;
@@ -251,9 +250,9 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const maxHp = 58 + forgeLevel * 3;
   const activeFoe = mapStep >= 3 ? { name: "Legion Warden", art: "legion-warden", hp: 72, passive:"Siegeborn: cycles armor, cleaves, and a devastating rush." } : FOES[foeIndex];
-  const foeMaxHp = Math.ceil((elite ? activeFoe.hp * 1.28 : activeFoe.hp)*(1+difficulty*.12));
+  const foeMaxHp = scaledEnemyHp(activeFoe.hp,elite,difficulty);
   const cityScore = forgeLevel + sanctumLevel + hallLevel + (rescued?1:0) + (wandererRescued?1:0);
-  const cityRank = cityScore>=11?"Fortified City":cityScore>=8?"Rising Stronghold":cityScore>=5?"Reclaimed Ward":"Last Refuge";
+  const cityRank = getCityRank(cityScore);
 
   const deck = useMemo(
     () => [...BASE_CARDS, ...ELEMENT_CARDS[selected[0]], ...ELEMENT_CARDS[selected[1]]],
@@ -303,7 +302,7 @@ export default function Home() {
     const escort=dangerous&&mapStep<3?FOES[(index+1)%FOES.length]:null;setSecondFoe(escort);setSecondHp(escort?Math.ceil(escort.hp*.65):0);setTargetSlot(0);setTargetHint(escort?"Select a target before attacking. Conduct chains to the other enemy.":"");
     if(mapStep===0 && !runDeck.length)setPlayerHp(58+forgeLevel*3);
     setElite(dangerous);
-    setEnemyHp(Math.ceil((dangerous ? target.hp * 1.28 : target.hp)*(1+difficulty*.12)));
+    setEnemyHp(scaledEnemyHp(target.hp,dangerous,difficulty));
     setEnemyArmor(0);
     setEnemyThorns(target.name==="Cinder Cultist"?2:0);
     setEnemyPhaseLabel("");
@@ -440,8 +439,8 @@ export default function Home() {
     }
     if(enemyRegeneration>0){setEnemyHp(v=>Math.min(foeMaxHp,v+enemyRegeneration));setEnemyRegeneration(v=>Math.max(0,v-1))}
     if (intent.damage) {
-      const scaled=intent.damage+difficulty+(activeFoe.name==="Ash Hound"?Math.floor((turn-1)/2)*2:0)+(mapStep>=3&&bossPhase===2?3:0)+enemyRage+(enemyCharged?4:0);
-      const attack = Math.max(0, Math.ceil((scaled - (weakened ? 4 : 0))*(vulnerable>0?1.5:1)));
+      const modifiers=(activeFoe.name==="Ash Hound"?Math.floor((turn-1)/2)*2:0)+(mapStep>=3&&bossPhase===2?3:0)+enemyRage+(enemyCharged?4:0);
+      const attack = incomingAttack(intent.damage,difficulty,modifiers,weakened,vulnerable>0);
       const damage = Math.max(0, attack - guard);
       const nextHp = playerHp - damage;
       hurtPlayer(damage,activeFoe.name);
@@ -482,7 +481,7 @@ export default function Home() {
     setCombatHistory(v=>[message,...v].slice(0,5));
   }
   function effectiveIntent(){
-    if(!intent?.damage)return `${guardBroken?"Guard broken: gains only 2 armor. ":""}${intent?.detail||""}`;const scaled=intent.damage+difficulty+(activeFoe.name==="Ash Hound"?Math.floor((turn-1)/2)*2:0)+(mapStep>=3&&bossPhase===2?3:0)+enemyRage+(enemyCharged?4:0);const attack=Math.max(0,Math.ceil((scaled-(weakened?4:0))*(vulnerable>0?1.5:1)));return `Attacks for ${attack}  ${Math.max(0,attack-guard)} after current Guard`;
+    if(!intent?.damage)return `${guardBroken?"Guard broken: gains only 2 armor. ":""}${intent?.detail||""}`;const modifiers=(activeFoe.name==="Ash Hound"?Math.floor((turn-1)/2)*2:0)+(mapStep>=3&&bossPhase===2?3:0)+enemyRage+(enemyCharged?4:0);const attack=incomingAttack(intent.damage,difficulty,modifiers,weakened,vulnerable>0);return `Attacks for ${attack}  ${Math.max(0,attack-guard)} after current Guard`;
   }
 
   const deckOverlay = showDeck && <div className="modal-backdrop" onClick={()=>setShowDeck(false)}><section className="deck-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowDeck(false)}>Close</button><p className="eyebrow">KNIGHT&apos;S DECK</p><h2>{(runDeck.length?runDeck:deck).length} cards</h2><div className="deck-list">{(runDeck.length?runDeck:deck).map((card,index)=><article key={`${card.id}-${index}`} className={card.element||"steel"}><b>{card.name}{upgraded.includes(card.id)?" +":""}</b><small>{cardCost(card)} energy  {card.element||"knight"}{upgradePaths[card.id]?`  ${upgradePaths[card.id]} path`:""}</small><p>{card.text}</p></article>)}</div><div className="relic-strip">{relics.length?relics.map(r=><span key={r}> {r}</span>):<span>No relics recovered</span>}</div></section></div>;
