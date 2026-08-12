@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Element = "fire" | "water" | "lightning";
 type MarkState = Record<Element, number>;
@@ -64,9 +64,9 @@ const FOE_INTENTS: Record<string, typeof ENEMY_INTENTS> = {
 };
 
 const FOES = [
-  { name: "Ash Hound", art: "ash-hound", hp: 34 }, { name: "Cinder Cultist", art: "cinder-cultist", hp: 40 },
-  { name: "Gate Reaver", art: "gate-reaver", hp: 48 }, { name: "Drowned Penitent", art: "drowned-penitent", hp: 52 },
-  { name: "Storm Imp", art: "storm-imp", hp: 38 }, { name: "Ironbound Brute", art: "ironbound-brute", hp: 64 },
+  { name: "Ash Hound", art: "ash-hound", hp: 34, passive:"Frenzy: Pounce grows by 2 each cycle." }, { name: "Cinder Cultist", art: "cinder-cultist", hp: 40, passive:"Kindled: gains armor before every heavy bolt." },
+  { name: "Gate Reaver", art: "gate-reaver", hp: 48, passive:"Relentless: attacks three turns in succession." }, { name: "Drowned Penitent", art: "drowned-penitent", hp: 52, passive:"Tidewall: alternates armor and crushing blows." },
+  { name: "Storm Imp", art: "storm-imp", hp: 38, passive:"Volatile: short, high-pressure attack cycle." }, { name: "Ironbound Brute", art: "ironbound-brute", hp: 64, passive:"Ironbound: braces before an 18-damage Hammerfall." },
 ];
 const BOSSES = [
   { name: "Furnace Bishop", art: "furnace-bishop" }, { name: "Tempest Wyvern", art: "tempest-wyvern" },
@@ -122,16 +122,31 @@ export default function Home() {
   const [showDeck, setShowDeck] = useState(false);
   const [upgraded, setUpgraded] = useState<string[]>([]);
   const [damageNumber, setDamageNumber] = useState("");
+  const [musicOn, setMusicOn] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(35);
+  const [effectsVolume, setEffectsVolume] = useState(70);
+  const [screenShake, setScreenShake] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [maraGift, setMaraGift] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const maxHp = 58 + forgeLevel * 3;
-  const activeFoe = mapStep >= 3 ? { name: "Legion Warden", art: "legion-warden", hp: 72 } : FOES[foeIndex];
+  const activeFoe = mapStep >= 3 ? { name: "Legion Warden", art: "legion-warden", hp: 72, passive:"Siegeborn: cycles armor, cleaves, and a devastating rush." } : FOES[foeIndex];
   const foeMaxHp = elite ? Math.ceil(activeFoe.hp * 1.28) : activeFoe.hp;
 
   const deck = useMemo(
     () => [...BASE_CARDS, ...ELEMENT_CARDS[selected[0]], ...ELEMENT_CARDS[selected[1]]],
     [selected],
   );
-  useEffect(()=>{const saved=localStorage.getItem("emberfall-save");if(saved){try{const data=JSON.parse(saved);setRescued(!!data.rescued);setBlueprint(!!data.blueprint);setForgeLevel(data.forgeLevel||0)}catch{}}},[]);
-  useEffect(()=>{localStorage.setItem("emberfall-save",JSON.stringify({rescued,blueprint,forgeLevel}))},[rescued,blueprint,forgeLevel]);
+  useEffect(()=>{const saved=localStorage.getItem("emberfall-save");if(saved){try{const data=JSON.parse(saved);setRescued(!!data.rescued);setBlueprint(!!data.blueprint);setForgeLevel(data.forgeLevel||0);setGold(data.gold??45);setUpgraded(data.upgraded||[]);setMaraGift(!!data.maraGift)}catch{}}},[]);
+  useEffect(()=>{localStorage.setItem("emberfall-save",JSON.stringify({rescued,blueprint,forgeLevel,gold,upgraded,maraGift}))},[rescued,blueprint,forgeLevel,gold,upgraded,maraGift]);
+  useEffect(()=>{const prefs=localStorage.getItem("emberfall-settings");if(prefs){try{const p=JSON.parse(prefs);setMusicVolume(p.musicVolume??35);setEffectsVolume(p.effectsVolume??70);setScreenShake(p.screenShake??true)}catch{}}},[]);
+  useEffect(()=>{localStorage.setItem("emberfall-settings",JSON.stringify({musicVolume,effectsVolume,screenShake}));if(audioRef.current)audioRef.current.volume=musicVolume/100},[musicVolume,effectsVolume,screenShake]);
+
+  function sound(kind:"card"|"hit"|"block"|"reaction"){
+    if(!effectsVolume)return;const AudioCtx=window.AudioContext||(window as typeof window & {webkitAudioContext:typeof AudioContext}).webkitAudioContext;if(!AudioCtx)return;const ctx=new AudioCtx();const osc=ctx.createOscillator();const gain=ctx.createGain();const tones={card:220,hit:92,block:145,reaction:440};osc.frequency.value=tones[kind];osc.type=kind==="reaction"?"sine":"triangle";gain.gain.setValueAtTime(.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime((effectsVolume/100)*.12,ctx.currentTime+.01);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.18);osc.connect(gain).connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.2);
+  }
+  function toggleMusic(){if(!audioRef.current)return;if(musicOn){audioRef.current.pause();setMusicOn(false)}else{audioRef.current.volume=musicVolume/100;audioRef.current.play().then(()=>setMusicOn(true)).catch(()=>{})}}
 
   function toggleElement(element: Element) {
     setSelected((current) => {
@@ -161,6 +176,7 @@ export default function Home() {
     setWeakened(false);
     setEnemyBurn(0);
     setLog(`${target.name} bars the road.`);
+    if(!localStorage.getItem("emberfall-tutorial-seen")){setShowTutorial(true);localStorage.setItem("emberfall-tutorial-seen","yes")}
     setScreen("combat");
   }
 
@@ -186,6 +202,7 @@ export default function Home() {
     setEnergy((value) => value - card.cost);
     setHand((cards) => cards.filter((item) => item.id !== card.id));
     setDiscard((cards) => [...cards, card]);
+    sound(card.block&&!card.damage?"block":"card");
     const isUpgraded = upgraded.includes(card.id);
     if (card.block) setGuard((value) => value + card.block! + (isUpgraded ? 3 : 0));
 
@@ -198,6 +215,7 @@ export default function Home() {
         (element) => element !== card.element && nextMarks[element] > 0,
       );
       if (partner) {
+        sound("reaction");
         const pair = [card.element, partner].sort().join("+");
         nextMarks[partner] -= 1;
         if (pair === "fire+water") {
@@ -217,6 +235,7 @@ export default function Home() {
     }
 
     if (dealt) {
+      sound("hit");
       setDamageNumber(`-${dealt}`); window.setTimeout(()=>setDamageNumber(""),650);
       setImpact(card.element ?? "steel");
       window.setTimeout(() => setImpact(""), 360);
@@ -278,11 +297,11 @@ export default function Home() {
 
   const deckOverlay = showDeck && <div className="modal-backdrop" onClick={()=>setShowDeck(false)}><section className="deck-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowDeck(false)}>Close</button><p className="eyebrow">KNIGHT&apos;S DECK</p><h2>{(runDeck.length?runDeck:deck).length} cards</h2><div className="deck-list">{(runDeck.length?runDeck:deck).map((card,index)=><article key={`${card.id}-${index}`} className={card.element||"steel"}><b>{card.name}{upgraded.includes(card.id)?" +":""}</b><small>{card.cost} energy · {card.element||"knight"}</small><p>{card.text}</p></article>)}</div><div className="relic-strip">{relics.length?relics.map(r=><span key={r}>◆ {r}</span>):<span>No relics recovered</span>}</div></section></div>;
 
-  if(screen==="intro") return <main className="intro-screen"><div className="intro-copy"><span className="crest intro-crest">EK</span><p className="eyebrow">AN ELEMENTAL KNIGHT CHRONICLE</p><h1>EMBERFALL</h1><p>Six vows. One fallen city. The road begins at the last unbroken gate.</p><button className="primary" onClick={()=>setScreen("town")}>Begin reclamation <span>→</span></button><small>Mouse recommended · Browser prototype</small></div></main>;
+  if(screen==="intro") return <main className="intro-screen"><audio ref={audioRef} src="/audio/dark-place.ogg" loop preload="metadata"/><div className="intro-copy"><span className="crest intro-crest">EK</span><p className="eyebrow">AN ELEMENTAL KNIGHT CHRONICLE</p><h1>EMBERFALL</h1><p>Six vows. One fallen city. The road begins at the last unbroken gate.</p><button className="primary" onClick={()=>setScreen("town")}>Begin reclamation <span>→</span></button><small>Mouse recommended · Browser prototype</small></div></main>;
 
   if (screen === "town") {
     return (
-      <main className="town-screen">
+      <main className={`town-screen ${blueprint?"reclaimed":"ruined"}`}><audio ref={audioRef} src="/audio/dark-place.ogg" loop preload="metadata"/>
         <header className="topbar">
           <div className="brand"><span className="crest">EK</span><div><b>EMBERFALL</b><small>An Elemental Knight Chronicle</small></div></div>
           <div className="resources"><button onClick={()=>setShowDeck(true)}>Deck</button><button onClick={()=>setShowRoster(true)}>Bestiary</button><button onClick={()=>setShowSettings(true)}>Settings</button><span>Blueprints <b>{blueprint ? 1 : 0}</b></span><span>Survivors <b>{rescued ? 1 : 0}</b></span></div>
@@ -296,11 +315,11 @@ export default function Home() {
           <div className="grid-lines" />
           <div className="town-knight" style={{left:`${townPos.x}%`,top:`${townPos.y}%`}}><img src="/art/elemental-knight.webp" alt="Elemental Knight walking through town"/></div>
           <div className="ambient-npc npc-one"><i/>Quartermaster</div><div className="ambient-npc npc-two"><i/>Refugee</div><div className="ambient-npc npc-three"><i/>Watchman</div>
-          {rescued && <button className="town-npc" onClick={(event)=>{event.stopPropagation();setTownMessage("Mara: Bring me a blueprint and I will make it sing.")}}>Mara</button>}
+          {rescued && <button className="town-npc" onClick={(event)=>{event.stopPropagation();if(!maraGift){setMaraGift(true);setGold(v=>v+20);setTownMessage("Mara: You came back for us. Take these 20 crowns—the dead have no use for them.")}else setTownMessage("Mara: Every tempered edge is another stone in Emberfall's wall.")}}>Mara {!maraGift&&<i className="gift-mark">!</i>}</button>}
           <button className={`building forge tier-${forgeLevel}`} onClick={(e)=>{e.stopPropagation();setTownPos({x:22,y:30});const target=(runDeck.length?runDeck:deck).find(c=>!upgraded.includes(c.id));if(rescued&&gold>=25&&target){setForgeLevel(v=>Math.min(3,v+1));setUpgraded(v=>[...v,target.id]);setGold(v=>v-25);setTownMessage(`${target.name} is reforged: +3 damage or Guard.`)}else setTownMessage(rescued?"Mara needs 25 gold and an unupgraded card.":"The forge is cold. Its keeper is missing.")}}><span className="roof">⚒</span><b>Blacksmith · {forgeLevel}</b><small>{rescued ? "Reforge a card · 25 gold" : "Ruined · survivor missing"}</small></button>
           <button className="building sanctum" onClick={(e)=>{e.stopPropagation();setTownPos({x:55,y:28});setTownMessage("The Sanctum opens the elemental attunement chamber.");window.setTimeout(()=>setScreen("attune"),450)}}><span className="roof">✦</span><b>Elemental Sanctum</b><small>Choose starting vows</small></button>
           <button className="building hall" onClick={(e)=>{e.stopPropagation();setTownPos({x:44,y:70});setTownMessage("The Hall displays regional threats and branching roads.")}}><span className="roof">⌂</span><b>Expedition Hall</b><small>Route intelligence</small></button>
-          <div className="empty-plot"><span>+</span><small>Empty plot</small></div>
+          <div className={`empty-plot ${blueprint?"claimed":""}`}><span>{blueprint?"⌂":"+"}</span><small>{blueprint?"Forge foundations secured":"Empty plot"}</small></div>
           <div className="road road-a" /><div className="road road-b" />
         </section>
         <aside className="town-panel">
@@ -312,7 +331,7 @@ export default function Home() {
         </aside>
         {deckOverlay}
         {showRoster&&<div className="modal-backdrop" onClick={()=>setShowRoster(false)}><section className="codex-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowRoster(false)}>Close</button><p className="eyebrow">LEGION BESTIARY</p><h2>Enemies of the Ashen March</h2><div className="roster-grid">{[...FOES,...BOSSES].map((foe,index)=><article key={foe.name} className={index>=FOES.length?"elite-entry":""}><img src={`/art/${foe.art}.webp`} alt={foe.name}/><b>{foe.name}</b><small>{index>=FOES.length?"BOSS":"ENEMY"}</small></article>)}</div></section></div>}
-        {showSettings&&<div className="modal-backdrop" onClick={()=>setShowSettings(false)}><section className="settings-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowSettings(false)}>Close</button><p className="eyebrow">SETTINGS</p><h2>Field provisions</h2><label>Music <input type="range" defaultValue="70"/></label><label>Effects <input type="range" defaultValue="85"/></label><label><input type="checkbox" defaultChecked/> Screen shake</label><label><input type="checkbox" defaultChecked/> Reduced flashes</label></section></div>}
+        {showSettings&&<div className="modal-backdrop" onClick={()=>setShowSettings(false)}><section className="settings-modal" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setShowSettings(false)}>Close</button><p className="eyebrow">SETTINGS</p><h2>Field provisions</h2><button className="audio-toggle" onClick={toggleMusic}>{musicOn?"Pause music":"Play music"}</button><label>Music <input aria-label="Music volume" type="range" value={musicVolume} onChange={e=>setMusicVolume(+e.target.value)}/></label><label>Effects <input aria-label="Effects volume" type="range" value={effectsVolume} onChange={e=>setEffectsVolume(+e.target.value)}/></label><label><input type="checkbox" checked={screenShake} onChange={e=>setScreenShake(e.target.checked)}/> Screen shake</label><small>“Dark Place” by SkyleTheFrench · CC0</small></section></div>}
       </main>
     );
   }
@@ -343,7 +362,7 @@ export default function Home() {
   const intent = combatPattern[intentIndex % combatPattern.length];
   return (
     <main className="combat-screen">
-      <header className="combat-top"><button onClick={() => setScreen("town")}>Abandon</button><button className="deck-button" onClick={()=>setShowDeck(true)}>Deck {runDeck.length}</button><div><span>{elite?"ELITE ROAD":"THE ASHEN MARCH"}</span><b>Ruined Western Gate</b></div><div className="turn">TURN <b>{turn}</b></div></header>
+      <header className="combat-top"><button onClick={()=>setPaused(true)}>Pause</button><button className="deck-button" onClick={()=>setShowDeck(true)}>Deck {runDeck.length}</button><div><span>{elite?"ELITE ROAD":"THE ASHEN MARCH"}</span><b>Ruined Western Gate</b></div><div className="turn">TURN <b>{turn}</b></div></header>
       <section className="battlefield">
         <div className="combatant knight">
           <div className="status"><b>Elemental Knight</b><span>{playerHp}/{maxHp}</span><div className="health"><i style={{ width: `${(playerHp / maxHp) * 100}%` }} /></div>{guard > 0 && <small>◆ {guard} Guard</small>}</div>
@@ -354,7 +373,7 @@ export default function Home() {
           <div className="intent-card"><small>NEXT INTENT</small><b>{intent.name}</b><span>{intent.detail}{weakened && intent.damage ? " · weakened" : ""}</span></div>
           <div className={`character-art demon-art entering ${impact?`hit ${impact}`:""}`}><img src={`/art/${activeFoe.art}.webp`} alt={activeFoe.name} /></div>
           {damageNumber&&<strong className="damage-number">{damageNumber}</strong>}<div className="status"><b>{elite?`Elite ${activeFoe.name}`:activeFoe.name}</b><span>{enemyHp}/{foeMaxHp}</span><div className="health enemy"><i style={{ width: `${(enemyHp / foeMaxHp) * 100}%` }} /></div>{enemyArmor > 0 && <small>⬟ {enemyArmor} Armor</small>}</div>
-          <div className="marks">{ELEMENTS.map((element) => marks[element.id] > 0 && <span key={element.id} className={element.id}>{element.sigil} {marks[element.id]}</span>)}</div>
+          <div className="marks">{ELEMENTS.map((element) => marks[element.id] > 0 && <span key={element.id} className={element.id}>{element.sigil} {marks[element.id]}</span>)}</div><p className="enemy-passive">{activeFoe.passive}</p>
         </div>
       </section>
       <section className="hand-zone">
@@ -363,8 +382,11 @@ export default function Home() {
         <button className="end-turn" onClick={endTurn}>End turn <span>→</span></button>
       </section>
       <footer className="combat-footer"><span>Draw pile <b>{drawPile.length}</b></span><span>Discard <b>{discard.length}</b></span><span>Reactions: <b>Steam · Conduct · Overload</b></span></footer>{deckOverlay}
+      {showTutorial&&<div className="modal-backdrop"><section className="tutorial-modal"><p className="eyebrow">FIRST ENGAGEMENT</p><h2>Read. Mark. React.</h2><div className="tutorial-grid"><span><b>1</b><strong>Read intent</strong><small>The enemy shows exactly what it will do.</small></span><span><b>2</b><strong>Apply a mark</strong><small>Elemental cards leave Fire, Water, or Lightning.</small></span><span><b>3</b><strong>Cross elements</strong><small>Steam weakens, Conduct chains, Overload bursts.</small></span></div><button className="primary" onClick={()=>setShowTutorial(false)}>Raise shield</button></section></div>}
+      {paused&&<div className="modal-backdrop"><section className="pause-modal"><p className="eyebrow">EXPEDITION PAUSED</p><h2>The road will wait.</h2><button className="primary" onClick={()=>setPaused(false)}>Resume battle</button><button className="quiet-button" onClick={()=>setScreen("town")}>Abandon expedition</button></section></div>}
     </main>
   );
 }
+
 
 
