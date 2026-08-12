@@ -41,3 +41,8 @@ test("audio source is licensed and player controlled",async()=>{
   const [page,license]=await Promise.all([readFile(new URL("app/page.tsx",root),"utf8"),readFile(new URL("public/audio/LICENSE.md",root),"utf8")]);
   assert.match(page,/dark-place\.ogg/);assert.match(page,/musicVolume/);assert.match(page,/effectsVolume/);assert.match(page,/ambienceVolume/);assert.match(license,/CC0 1\.0 Universal/);
 });
+
+test("browser presentation has resilient loading error and install surfaces",async()=>{
+  const [loading,error,manifest]=await Promise.all([readFile(new URL("app/loading.tsx",root),"utf8"),readFile(new URL("app/error.tsx",root),"utf8"),readFile(new URL("app/manifest.ts",root),"utf8")]);
+  assert.match(loading,/Lighting the western gate/);assert.match(error,/campaign record remains on this device/);assert.match(error,/reset/);assert.match(manifest,/display: "standalone"/);assert.match(manifest,/theme_color: "#b8934e"/);
+});
