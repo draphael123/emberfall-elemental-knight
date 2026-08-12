@@ -70,7 +70,7 @@ test("elite encounters provide target selection and varied relic choice",()=>{
 
 test("retreat loses ordinary resources but preserves campaign state",()=>{
   const retreat=source.match(/function retreat\(\)\{([^}]|\}(?!\n))*?setScreen\("town"\)\}/s)?.[0]??"";
-  for(const reset of ["setGold(runGoldStart)","setSupplies(runSuppliesStart)","setRunDeck([])","setRelics([])"])assert.ok(retreat.includes(reset));
+  for(const reset of ["retreatResources(runGoldStart,runSuppliesStart)","setGold(bank.gold)","setSupplies(bank.supplies)","setRunDeck([])","setRelics(bank.relics)"])assert.ok(retreat.includes(reset));
   for(const permanent of ["setRescued","setBlueprint","setForgeLevel","setCampaignWins"])assert.ok(!retreat.includes(permanent));
 });
 test("defeat restores only the pre-expedition resource bank",()=>{

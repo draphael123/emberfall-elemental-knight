@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/set-state-in-effect, jsx-a11y/media-has-caption, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-element-interactions, @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { cityRank as getCityRank, incomingAttack, rewardBand, scaledEnemyHp, seededShuffle } from "./game-logic";
+import { cityRank as getCityRank, earnedResources, effectiveCardCost, incomingAttack, powerBoost, retreatResources, rewardBand, scaledEnemyHp, seededShuffle } from "./game-logic";
 
 type Element = "fire" | "water" | "lightning";
 type MarkState = Record<Element, number>;
@@ -95,11 +95,11 @@ const BOSSES = [
   { name: "Abyssal Tidemother", art: "abyssal-tidemother" }, { name: "Ashen Colossus", art: "ashen-colossus" },
 ];
 const TOWN_LINES = [
-  "Quartermaster: We count arrows by the dozen and survivors one by one.",
-  "Watchman: The western fires moved closer last night.",
-  "Refugee: I remember when the Sanctum bells marked weddings, not raids.",
+  "Orin: Twelve arrows, three lamp flasks, one dry blanket. That is what stands between a patrol and a funeral.",
+  "Watchman Cael: The western fires stopped moving at midnight. Demons do that when they have found a door.",
+  "Tessa: The Sanctum bell rang at my wedding. If you restore it, ring it for the living first.",
 ];
-const TOWN_AMBIENCE = ["Rain ticks against the restored western parapet.","Forge smoke curls above the roofs.","Scouts trade route marks beneath the Hall lanterns.","The Sanctum bell rings once across the courtyard."];
+const TOWN_AMBIENCE = ["Rain needles the canvas roofs; someone tightens a guy-rope before it tears.","A hammer tests the same cracked hinge three times, listening for weakness.","Scouts scrape yesterday's chalk routes from the Hall table.","Wind catches the split Sanctum bell. It answers with half a note."];
 const RELICS = [
   {name:"Stormglass",text:"Your first attack each battle deals 4 extra damage."},
   {name:"Pilgrim Bell",text:"Heal 5 health at the start of each battle."},
@@ -284,8 +284,8 @@ export default function Home() {
     const partner=(Object.keys(marks) as Element[]).find(e=>e!==card.element&&marks[e]>0);if(!partner)return `Applies ${card.element} mark`;
     const pair=[card.element,partner].sort().join("+");if(pair==="fire+water")return `STEAM - weaken next attack${suffix?`  ${suffix}`:""}`;if(pair==="fire+lightning")return `OVERLOAD - +${9+(relics.includes("Ember Lens")?3:0)} damage${suffix?`  ${suffix}`:""}`;return `CONDUCT - +6 and chain${suffix?`  ${suffix}`:""}`;
   }
-  function cardCost(card:Card){return Math.max(0,card.cost-(upgradePaths[card.id]==="mastery"?1:0))}
-  function cardBoost(card:Card){return upgradePaths[card.id]==="power"?3:0}
+  function cardCost(card:Card){return effectiveCardCost(card.cost,upgradePaths[card.id]==="mastery")}
+  function cardBoost(card:Card){return powerBoost(0,upgradePaths[card.id]==="power")}
   function runShuffle<T>(items:T[],label:string){const next=shuffleCount+1;setShuffleCount(next);return runSeed?seededShuffle(items,`${runSeed}:${label}:${next}`):shuffle(items)}
 
   function startCombat(index = 0, dangerous = false) {
@@ -331,11 +331,11 @@ export default function Home() {
   }
   function beginExpedition(){setRunGoldStart(gold);setRunSuppliesStart(supplies);setTownDay(v=>v+1);setMapStep(0);setEncountersCleared(0);setRouteHistory([]);setRunDeck([]);setShuffleCount(0);setRunSeed(Math.random().toString(36).slice(2,8).toUpperCase());setScreen("attune")}
   function spendSupply(){if(supplies<=0||playerHp>=maxHp)return;setSupplies(v=>v-1);setPlayerHp(v=>Math.min(maxHp,v+8));setTownMessage("A field ration restores 8 health before departure.")}
-  function retreat(){setGold(runGoldStart);setSupplies(runSuppliesStart);setRunDeck([]);setRelics([]);setRouteHistory([]);setTownMessage("The Knight returns without expedition spoils. Banked town resources, blueprints, and rescued people remain.");setScreen("town")}
+  function retreat(){const bank=retreatResources(runGoldStart,runSuppliesStart);setGold(bank.gold);setSupplies(bank.supplies);setRunDeck([]);setRelics(bank.relics);setRouteHistory([]);setTownMessage("The Knight returns without expedition spoils. Banked town resources, blueprints, and rescued people remain.");setScreen("town")}
   function openNode(type:"camp"|"merchant"|"event") {setNodeType(type);if(type==="merchant")setMerchantStock(runShuffle(REWARD_CARDS.filter(card=>!card.element||selected.includes(card.element)),`merchant-${mapStep}`).slice(0,3));}
   function finishNode(){if(nodeType)setRouteHistory(v=>[...v,nodeType[0].toUpperCase()+nodeType.slice(1)]);setMapStep(v=>v+1);setNodeType(null)}
   function removeCard(){const current=runDeck.length?runDeck:deck;if(current.length<=8)return;setRunDeck(current.slice(0,-1));setGold(v=>v-25);setTownMessage("The peddler burns one unwanted technique.")}
-  function claimReward(card?:Card){if(card)setRunDeck(v=>[...(v.length?v:deck),card]);setGold(v=>v+(elite?20:10));setSupplies(v=>v+(elite?2:1));setEncountersCleared(v=>v+1);if(elite){setRelicChoice(runShuffle(RELICS.filter(r=>!relics.includes(r.name)),`relic-${mapStep}`).slice(0,2));return}setMapStep(v=>v+1);setScreen("map")}
+  function claimReward(card?:Card){const earned=earnedResources(elite);if(card)setRunDeck(v=>[...(v.length?v:deck),card]);setGold(v=>v+earned.gold);setSupplies(v=>v+earned.supplies);setEncountersCleared(v=>v+1);if(elite){setRelicChoice(runShuffle(RELICS.filter(r=>!relics.includes(r.name)),`relic-${mapStep}`).slice(0,2));return}setMapStep(v=>v+1);setScreen("map")}
   function rewardComparison(card:Card){const current=runDeck.length?runDeck:deck;const same=current.filter(c=>c.element===card.element);const average=same.length?Math.round(same.reduce((sum,c)=>sum+(c.damage||c.block||0),0)/same.length):0;return rewardBand(card.damage||card.block||0,average)}
   function chooseRelic(name:string){setRelics(v=>[...v,name]);setRelicChoice(null);setMapStep(v=>v+1);setScreen("map")}
   function reforge(card:Card,path:"power"|"mastery"){if(gold<25||upgraded.includes(card.id))return;setGold(v=>v-25);setUpgraded(v=>[...v,card.id]);setUpgradePaths(v=>({...v,[card.id]:path}));setForgeLevel(v=>Math.min(3,v+1));setForgeTarget(null);setTownMessage(`${card.name} follows the ${path==="power"?"Power path: +3 damage or Guard":"Mastery path: costs 1 less energy"}.`)}
