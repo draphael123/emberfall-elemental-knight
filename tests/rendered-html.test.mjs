@@ -46,3 +46,12 @@ test("browser presentation has resilient loading error and install surfaces",asy
   const [loading,error,manifest]=await Promise.all([readFile(new URL("app/loading.tsx",root),"utf8"),readFile(new URL("app/error.tsx",root),"utf8"),readFile(new URL("app/manifest.ts",root),"utf8")]);
   assert.match(loading,/Lighting the western gate/);assert.match(error,/campaign record remains on this device/);assert.match(error,/reset/);assert.match(manifest,/display: "standalone"/);assert.match(manifest,/theme_color: "#b8934e"/);
 });
+
+test("town presentation exposes a concrete restoration objective",async()=>{
+  const [page,css]=await Promise.all([readFile(new URL("app/page.tsx",root),"utf8"),readFile(new URL("app/globals.css",root),"utf8")]);
+  assert.match(page,/restorationObjectives/);assert.match(page,/Next: \{nextRestoration\}/);assert.match(page,/restoration\.filter/);assert.match(css,/\.restoration-strip/);
+});
+
+test("mobile combat keeps intents compact and touch controls reachable",async()=>{
+  const css=await readFile(new URL("app/globals.css",root),"utf8");assert.match(css,/@media\(max-width:620px\)\{\.intent-card/);assert.match(css,/min-height:44px/);assert.match(css,/\.hand-zone\{grid-template-columns:56px 1fr 76px\}/);
+});
