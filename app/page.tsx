@@ -95,6 +95,7 @@ const TOWN_LINES = [
   "Watchman: The western fires moved closer last night.",
   "Refugee: I remember when the Sanctum bells marked weddings, not raids.",
 ];
+const TOWN_AMBIENCE = ["Rain ticks against the restored western parapet.","Forge smoke curls above the roofs.","Scouts trade route marks beneath the Hall lanterns.","The Sanctum bell rings once across the courtyard."];
 const RELICS = [
   {name:"Stormglass",text:"Your first attack each battle deals 4 extra damage."},
   {name:"Pilgrim Bell",text:"Heal 5 health at the start of each battle."},
@@ -242,6 +243,7 @@ export default function Home() {
   const [runStats, setRunStats] = useState({cardsPlayed:0,reactions:0,damageTaken:0,elites:0});
   const [bossPhase, setBossPhase] = useState(1);
   const [firstAttack, setFirstAttack] = useState(true);
+  const [guardBroken, setGuardBroken] = useState(false);
   const [buildingPos, setBuildingPos] = useState({forge:{x:11,y:15},sanctum:{x:47,y:9},hall:{x:35,y:58}});
   const audioRef = useRef<HTMLAudioElement>(null);
   const maxHp = 58 + forgeLevel * 3;
@@ -259,6 +261,7 @@ export default function Home() {
   useEffect(()=>{const prefs=localStorage.getItem("emberfall-settings");if(prefs){try{const p=JSON.parse(prefs);setMusicVolume(p.musicVolume??35);setEffectsVolume(p.effectsVolume??70);setAmbienceVolume(p.ambienceVolume??25);setScreenShake(p.screenShake??true);setReducedMotion(!!p.reducedMotion);setLargeText(!!p.largeText);setHighContrast(!!p.highContrast)}catch{localStorage.removeItem("emberfall-settings")}}},[]);
   useEffect(()=>{localStorage.setItem("emberfall-settings",JSON.stringify({musicVolume,effectsVolume,ambienceVolume,screenShake,reducedMotion,largeText,highContrast}));if(audioRef.current)audioRef.current.volume=(musicVolume/100)*(ambienceVolume/100+.5);document.body.classList.toggle("large-text",largeText);document.body.classList.toggle("high-contrast",highContrast);document.body.classList.toggle("reduce-motion",reducedMotion)},[musicVolume,effectsVolume,ambienceVolume,screenShake,reducedMotion,largeText,highContrast]);
   useEffect(()=>{if(screen!=="defeat")return;setGold(runGoldStart);setSupplies(runSuppliesStart);setRelics([])},[screen,runGoldStart,runSuppliesStart]);
+  useEffect(()=>{if(screen!=="town")return;let index=townDay%TOWN_AMBIENCE.length;const timer=window.setInterval(()=>{setTownMessage(current=>current.startsWith("Boots ring")||current.startsWith("Click anywhere")||TOWN_AMBIENCE.includes(current)?TOWN_AMBIENCE[index++%TOWN_AMBIENCE.length]:current)},12000);return()=>window.clearInterval(timer)},[screen,townDay]);
   useEffect(()=>{function keys(event:KeyboardEvent){if(screen==="combat"&&!showTutorial){if(event.key==="Escape")setPaused(v=>!v);if(event.key.toLowerCase()==="e"&&!paused)endTurn();const number=Number(event.key);if(number>=1&&number<=hand.length&&!paused)playCard(hand[number-1])}}window.addEventListener("keydown",keys);return()=>window.removeEventListener("keydown",keys)});
 
   function sound(kind:"card"|"hit"|"block"|"reaction"){
@@ -315,6 +318,7 @@ export default function Home() {
     setPlayerBurn(0);
     setVulnerable(0);
     setBossPhase(1);setFirstAttack(true);
+    setGuardBroken(false);
     if(relics.includes("Pilgrim Bell"))setPlayerHp(v=>Math.min(maxHp,v+5));
     if(mapStep===0)setRunStats({cardsPlayed:0,reactions:0,damageTaken:0,elites:0});if(dangerous)setRunStats(v=>({...v,elites:v.elites+1}));
     setLog(`${target.name} bars the road.`);
@@ -417,7 +421,7 @@ export default function Home() {
     if(card.burn)setEnemyBurn(value=>value+card.burn!);
     if(card.heal)setPlayerHp(v=>Math.min(maxHp,v+card.heal!));
     if(card.cleanse){setPlayerBurn(0);setVulnerable(0)}
-    if(card.armorBreak)setEnemyArmor(v=>Math.max(0,v-card.armorBreak!));
+    if(card.armorBreak){setEnemyArmor(v=>Math.max(0,v-card.armorBreak!));setGuardBroken(true)}
     const cardLog=reaction || `${card.name} strikes ${targetSlot===0?activeFoe.name:secondFoe?.name}.`;setLog(cardLog);setCombatHistory(v=>[cardLog,...v].slice(0,5));
     if (card.draw) drawCards(card.draw, hand.filter((item) => item.id !== card.id), drawPile, card.exhaust?discard:[...discard, card]);
   }
@@ -450,10 +454,11 @@ export default function Home() {
         return;
       }
     } else {
-      setEnemyArmor((value) => value + 7);
+      setEnemyArmor((value) => value + Math.max(2,7-(guardBroken?5:0)));
       if(activeFoe.name==="Ironbound Brute")setEnemyRage(v=>v+2);
       if(activeFoe.name==="Drowned Penitent")setEnemyRegeneration(v=>v+3);
-      message = `${activeFoe.name} gains 7 demonic armor.${enemyBurn?` Burn deals ${enemyBurn}.`:""}`;
+      message = guardBroken?`${activeFoe.name}'s shattered guard restores only 2 armor.`:`${activeFoe.name} gains 7 demonic armor.${enemyBurn?` Burn deals ${enemyBurn}.`:""}`;
+      setGuardBroken(false);
     }
     if(playerBurn>0){hurtPlayer(playerBurn,"Burn");setPlayerBurn(v=>Math.max(0,v-1))}
     const retained=hand.filter(card=>card.retain);const spent = [...discard, ...hand.filter(card=>!card.retain)];

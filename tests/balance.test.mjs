@@ -56,6 +56,9 @@ test("all incoming damage routes through shared defeat handling",()=>{
 test("elemental decks support both reactions and stored-mark finishers",()=>{
   for(const mechanic of ["markBurst","Vowbreaker","Brand Harvest","Cleansing Rain","cleanse"])assert.match(source,new RegExp(mechanic,"i"));assert.match(source,/setMarks\(emptyMarks\(\)\)/);
 });
+test("armor break changes the enemy's next defensive action",()=>{
+  assert.match(source,/guardBroken/);assert.match(source,/restores only 2 armor/);assert.match(source,/7-\(guardBroken\?5:0\)/);
+});
 
 test("elite encounters provide target selection and varied relic choice",()=>{
   assert.match(source,/targetSlot/);assert.match(source,/escort-target/);assert.match(source,/relicChoice/);assert.ok([...source.matchAll(/name:"(?:Stormglass|Pilgrim Bell|Bastion Sigil|Ember Lens)"/g)].length===4);
