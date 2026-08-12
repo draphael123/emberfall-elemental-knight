@@ -128,3 +128,11 @@ export function deckCurve(costs: number[]) {
 export function handDrawCount(retained: number, handLimit = 8, targetHand = 5) {
   return Math.max(0, Math.min(targetHand - retained, handLimit - retained));
 }
+
+export function effectiveCardCost(baseCost: number, mastery: boolean) {
+  return Math.max(0, baseCost - (mastery ? 1 : 0));
+}
+
+export function powerBoost(value: number, power: boolean) {
+  return value + (power && value > 0 ? 3 : 0);
+}

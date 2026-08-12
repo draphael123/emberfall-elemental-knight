@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canAfford, cityRank, deckCurve, eligibleRewards, expeditionGrade, handDrawCount, hashSeed, incomingAttack, parseCampaignSave, reactionResult, relicChoices, removeAt, repairCampaignSave, restorationObjectives, rewardBand, scaledEnemyHp, seededShuffle, spend } from "../app/game-logic.ts";
+import { canAfford, cityRank, deckCurve, effectiveCardCost, eligibleRewards, expeditionGrade, handDrawCount, hashSeed, incomingAttack, parseCampaignSave, powerBoost, reactionResult, relicChoices, removeAt, repairCampaignSave, restorationObjectives, rewardBand, scaledEnemyHp, seededShuffle, spend } from "../app/game-logic.ts";
 
 test("seeded shuffles are reproducible and seed-sensitive",()=>{
   const cards=["a","b","c","d","e","f"];
@@ -96,4 +96,9 @@ test("town and merchant purchases cannot create negative balances",()=>{
 test("deck curve and retained-card draws remain bounded",()=>{
   assert.deepEqual(deckCurve([0,1,1,2,2,2,4]),[1,2,3,1]);
   assert.equal(handDrawCount(0),5);assert.equal(handDrawCount(2),3);assert.equal(handDrawCount(5),0);assert.equal(handDrawCount(9),0);
+});
+
+test("branching upgrades cannot create negative costs",()=>{
+  assert.equal(effectiveCardCost(2,true),1);assert.equal(effectiveCardCost(0,true),0);assert.equal(effectiveCardCost(1,false),1);
+  assert.equal(powerBoost(7,true),10);assert.equal(powerBoost(0,true),0);assert.equal(powerBoost(7,false),7);
 });
